@@ -1,20 +1,20 @@
-import tensorflow as tf
+import math
 
-import config
+import numpy as np
+import torch
 
-# Load configs
-min_signal_rate = config.model_params['min_signal_rate']
-max_signal_rate = config.model_params['max_signal_rate']
 
-def improved_cosine(diffusion_times):
+def improved_cosine(t, config):
+    # Get max and min alpha
+    alpha_min, alpha_max = config.diffusion.alpha_min, config.diffusion.alpha_max
+
     # diffusion times -> angles
-    start_angle = tf.acos(max_signal_rate)
-    end_angle = tf.acos(min_signal_rate)
+    start_angle = math.acos(alpha_min)
+    end_angle = math.acos(alpha_max)
 
-    diffusion_angles = start_angle + diffusion_times * (end_angle - start_angle)
+    diffusion_angles = start_angle + t * (end_angle - start_angle)
 
     # angles -> signal and noise rates
-    signal_rates = tf.cos(diffusion_angles)
-    noise_rates = tf.sin(diffusion_angles)
+    alpha_t = torch.cos(diffusion_angles) ** 2
 
-    return noise_rates, signal_rates
+    return alpha_t

@@ -1,85 +1,94 @@
-import tensorflow as tf
-from tensorflow import keras
+import torch
+import torch.nn as nn
 
-def ResidualBlock(depth):
-    def apply(x):
-        input_depth = x.shape[-1]
-        if input_depth == depth:
-            residual = x
-        else:
-            residual = keras.layers.Conv2D(depth, kernel_size=1)(x)
-        x = keras.layers.BatchNormalization(center=False, scale=False)(x)
-        x = keras.layers.Conv2D(
-            depth, kernel_size=3, padding="same", activation=keras.activations.swish
-        )(x)
-        x = keras.layers.Conv2D(depth, kernel_size=3, padding="same")(x)
-        x = keras.layers.Add()([x, residual])
-        return x
-
-    return apply
+from ._utils import Normalize, get_timestep_embedding, swish
 
 
-def DownBlock(depth, block_depth):
-    def apply(x):
-        x, skips = x
-        for _ in range(block_depth):
-            x = ResidualBlock(depth)(x)
-            skips.append(x)
-        x = keras.layers.AveragePooling2D(pool_size=2)(x)
-        return x
+class ResidualBlock(nn.Module):
+    """
+    Implements a Simple Convolutional Block with Residual Connection between input and output
+    """
 
-    return apply
+    def __init__(self, n_ch):
+        super().__init__()
 
+        # Infos
+        self.n_ch = n_ch
 
-def UpBlock(depth, block_depth):
-    def apply(x):
-        x, skips = x
-        x = keras.layers.UpSampling2D(size=2, interpolation="bilinear")(x)
-        for _ in range(block_depth):
-            x = keras.layers.Concatenate()([x, skips.pop()])
-            x = ResidualBlock(depth)(x)
-        return x
+        # Layers
+        self.bn = nn.BatchNorm2d(n_ch)
+        self.conv1 = nn.Conv2d(n_ch, n_ch, kernel_size=3, padding="same")
+        self.conv2 = nn.Conv2d(n_ch, n_ch, kernel_size=3, padding="same")
 
-    return apply
-
-
-def ConvexResidualBlock(depth):
-    def apply(x):
-        input_depth = x.shape[-1]
-        if input_depth == depth:
-            residual = x
-        else:
-            residual = keras.layers.Conv2D(depth, kernel_size=1, kernel_constraint=keras.constraints.NonNeg())(x)
-        x = keras.layers.BatchNormalization(center=False, scale=False, gamma_constraint=keras.constraints.NonNeg())(x)
-        x = keras.layers.Conv2D(
-            depth, kernel_size=3, padding="same", activation="relu", kernel_constraint=keras.constraints.NonNeg()
-        )(x)
-        x = keras.layers.Conv2D(depth, kernel_size=3, padding="same", kernel_constraint=keras.constraints.NonNeg())(x)
-        x = keras.layers.Add()([x, residual])
-        return x
-
-    return apply
+    def forward(self, x):
+        h = x
+        h = self.bn(h)
+        h = swish(self.conv1(h))
+        h = swish(self.conv2(h))
+        return x + h
 
 
-def ConvexDownBlock(depth, block_depth):
-    def apply(x):
-        x, skips = x
-        for _ in range(block_depth):
-            x = ConvexResidualBlock(depth)(x)
-            skips.append(x)
-        x = keras.layers.MaxPooling2D()(x)
-        return x
+class DownBlock(nn.Module):
+    """
+    Implements an Encoding level of UNet.
+    """
 
-    return apply
+    def __init__(self, n_ch, n_blocks):
+        super().__init__()
+
+        # Infos
+        self.n_ch = n_ch
+        self.n_blocks = n_blocks
+
+        # Layers
+        self.residual_blocks = nn.ModuleList(
+            [ResidualBlock(n_ch) for _ in range(n_blocks)]
+        )
+        self.avg_pool = nn.AvgPool2d(kernel_size=2)
+        self.out_conv = nn.Conv2d(n_ch, 2 * n_ch, kernel_size=3, padding="same")
+
+    def forward(self, x):
+        h = x
+        skips = []
+        for layer in self.residual_blocks:
+            h = layer(h)
+            skips.append(h)
+        h = self.avg_pool(h)
+        h = swish(self.out_conv(h))
+        return h, skips
 
 
-def ConvexUpBlock(depth, block_depth):
-    def apply(x):
-        x, skips = x
-        x = keras.layers.UpSampling2D()(x)
-        for _ in range(block_depth):
-            x = keras.layers.Concatenate()([x, skips.pop()])
-            x = ConvexResidualBlock(depth)(x)
-        return x
+class UpBlock(nn.Module):
+    """
+    Implements an Encoding level of UNet.
+    """
 
-    return apply
+    def __init__(self, n_ch, n_blocks):
+        super().__init__()
+
+        # Infos
+        self.n_ch = n_ch
+        self.n_blocks = n_blocks
+
+        # Layers
+        self.in_conv = nn.Conv2d(2 * n_ch, n_ch, kernel_size=3, padding="same")
+        self.upsampling = nn.UpsamplingBilinear2d(scale_factor=2)
+        self.conv_blocks = nn.ModuleList(
+            [
+                nn.Conv2d(2 * n_ch, n_ch, kernel_size=1, padding="same")
+                for _ in range(n_blocks)
+            ]
+        )
+        self.residual_blocks = nn.ModuleList(
+            [ResidualBlock(n_ch) for _ in range(n_blocks)]
+        )
+
+    def forward(self, x):
+        h, skips = x
+        h = self.upsampling(h)
+        h = self.in_conv(h)
+        for i in range(self.n_blocks):
+            h = torch.cat((h, skips.pop()), dim=1)
+            h = self.conv_blocks[i](h)
+            h = self.residual_blocks[i](h)
+        return h
