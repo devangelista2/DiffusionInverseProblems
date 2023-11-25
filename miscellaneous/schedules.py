@@ -9,8 +9,8 @@ def improved_cosine(t, config):
     alpha_min, alpha_max = config.diffusion.alpha_min, config.diffusion.alpha_max
 
     # diffusion times -> angles
-    start_angle = math.acos(alpha_min)
-    end_angle = math.acos(alpha_max)
+    start_angle = math.acos(alpha_max)
+    end_angle = math.acos(alpha_min)
 
     diffusion_angles = start_angle + t * (end_angle - start_angle)
 

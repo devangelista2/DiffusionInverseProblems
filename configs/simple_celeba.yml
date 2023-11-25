@@ -6,7 +6,7 @@ data:
 
 training:
     batch_size: 128
-    n_epochs: 1
+    n_epochs: 50
     loss: 'mse'
 
 optimizer:

@@ -106,9 +106,11 @@ class DDIM(object):
 
                 self.ema_helper.update(self.model)
                 data_start = time.time()
-        # After training, save the model weights
-        weights_path = f"./model_weights/{self.config.data.dataset}.pth"
-        torch.save(self.model.state_dict(), weights_path)
+
+            # Every 10 epochs, save the model weights
+            if (epoch % 10) == 0:
+                weights_path = f"./model_weights/{self.config.data.dataset}.pth"
+                torch.save(self.model.state_dict(), weights_path)
 
     def reverse_diffusion(self, x_T, diffusion_steps=None):
         """
@@ -122,7 +124,7 @@ class DDIM(object):
             diffusion_steps = self.num_timesteps
 
         # Get the step size (to move backward)
-        delta_t = 1 // diffusion_steps
+        delta_t = 1 / diffusion_steps
 
         # Get the batch size
         batch_size = x_T.size(0)
@@ -135,6 +137,7 @@ class DDIM(object):
             # Get alpha(t) and alpha(t-1)
             alpha_t = self.alpha(t, self.config).to(self.device)
             alpha_t_pred = self.alpha(t - delta_t, self.config).to(self.device)
+            print(alpha_t)
 
             # Predict the noise of xt by UNet
             e_pred = self.model(x_t, alpha_t)
