@@ -20,7 +20,7 @@ SAVE_RESULTS = True
 config = configurations.load_config(CONFIG_PATH)
 
 # Load the data
-x_train = data.load_data(config)
+x_train, _ = data.load_data(config)
 
 # Define DDIM model
 ddim_model = DDIM(config)

@@ -45,7 +45,16 @@ def load_data(config):
                 download=True,
                 transform=transform,
             )
-            return x_train
+
+            # Load test set
+            x_test = datasets.MNIST(
+                f"../data/{config.data.data_path}",
+                train=False,
+                download=True,
+                transform=transform,
+            )
+
+            return x_train, x_test
 
         case "CIFAR10":
             # Define the transform
@@ -60,7 +69,21 @@ def load_data(config):
                 download=True,
                 transform=transform,
             )
-            return x_train
+
+            # Load test set
+            x_test = datasets.CIFAR10(
+                f"../data/{config.data.data_path}",
+                train=False,
+                download=True,
+                transform=transform,
+            )
+
+            return x_train, x_test
+
+        case "SimpleCelebA":
+            x_train = ImageDataset(config)
+
+            return x_train, []
 
         case _:
             return None
