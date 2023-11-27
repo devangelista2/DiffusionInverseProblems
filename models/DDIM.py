@@ -50,21 +50,27 @@ class DDIM(object):
         )
 
         # Define the loss function
-        if self.config.training.loss == "mse":
-            self.loss_fn = torch.nn.MSELoss()
+        match self.config.training.loss.lower():
+            case "mse":
+                self.loss_fn = torch.nn.MSELoss()
+            case "mae":
+                self.loss_fn = torch.nn.L1Loss()
 
         # Compute the total number of steps per epoch
         steps_per_epoch = len(dataset) // self.config.training.batch_size
 
         # Start training
-        step = 0
         for epoch in range(self.config.training.n_epochs):
             total_loss = 0
+            step = 0
             start_time = time.time()
             print(f"Epoch: {epoch+1}/{self.config.training.n_epochs}:")
 
             # Batch steps
-            for i, x_0 in enumerate(train_loader):
+            for i, batch in enumerate(train_loader):
+                # Take x_0 from data
+                x_0, _ = batch
+
                 # Update step
                 step += 1
 
@@ -109,7 +115,7 @@ class DDIM(object):
 
             # Every 10 epochs, save the model weights
             if (epoch % 10) == 0:
-                weights_path = f"./model_weights/{self.config.data.dataset}.pth"
+                weights_path = f"./model_weights/{self.config.data.dataset}_{self.config.training.loss}.pth"
                 torch.save(self.model.state_dict(), weights_path)
 
     def reverse_diffusion(self, x_T, diffusion_steps=None):
@@ -137,7 +143,6 @@ class DDIM(object):
             # Get alpha(t) and alpha(t-1)
             alpha_t = self.alpha(t, self.config).to(self.device)
             alpha_t_pred = self.alpha(t - delta_t, self.config).to(self.device)
-            print(alpha_t)
 
             # Predict the noise of xt by UNet
             e_pred = self.model(x_t, alpha_t)

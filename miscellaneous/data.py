@@ -2,7 +2,9 @@ import os
 
 import numpy as np
 import torch
+import torchvision
 from torch.utils.data import Dataset
+from torchvision import datasets, transforms
 
 
 class ImageDataset(Dataset):
@@ -25,3 +27,40 @@ class ImageDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+
+def load_data(config):
+    # Check wether the dataset is configured
+    match config.data.dataset:
+        case "MNIST":
+            # Define the transform
+            transform = transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+            )
+
+            # Load training set
+            x_train = datasets.MNIST(
+                f"../data/{config.data.data_path}",
+                train=True,
+                download=True,
+                transform=transform,
+            )
+            return x_train
+
+        case "CIFAR10":
+            # Define the transform
+            transform = transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+            )
+
+            # Load training set
+            x_train = datasets.CIFAR10(
+                f"../data/{config.data.data_path}",
+                train=True,
+                download=True,
+                transform=transform,
+            )
+            return x_train
+
+        case _:
+            return None
