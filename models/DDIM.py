@@ -1,6 +1,8 @@
 import datetime
+import os
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.utils.data as data
@@ -69,7 +71,7 @@ class DDIM(object):
             # Batch steps
             for i, batch in enumerate(train_loader):
                 # Take x_0 from data
-                x_0, _ = batch
+                x_0 = batch  # ADD , _ if batch is a tuple
 
                 # Update step
                 step += 1
@@ -152,11 +154,50 @@ class DDIM(object):
 
             # Compute x_{t-1} by x_0
             x_t = alpha_t_pred.sqrt() * x_pred + (1 - alpha_t_pred).sqrt() * e_pred
+            x_t = x_t.detach().clone()
 
         return x_t
 
-    def test(self):
-        pass
+    def test_generation(self, path, n_samples=16, diffusion_steps=20):
+        """
+        NOTE: n must be a perfect square!
+        """
+        n = int(np.sqrt(n_samples))
+
+        x_T = torch.randn(
+            (
+                n_samples,
+                self.config.data.channels,
+                self.config.data.image_size,
+                self.config.data.image_size,
+            )
+        ).to(self.config.device)
+        x_0 = self.reverse_diffusion(x_T, diffusion_steps=diffusion_steps)
+
+        # Move x_0 to cpu() and normalize
+        x_0 = x_0.cpu().detach().numpy()
+        x_0 = (x_0 - x_0.min()) / (x_0.max() - x_0.min())
+
+        # Results
+        #### Create results folder if required
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        # Save images
+        plt.figure()
+        for i in range(n_samples):
+            plt.subplot(n, n, i + 1)
+            if self.config.data.channels == 1:
+                plt.imshow(x_0[i, 0], cmap="gray")
+            elif self.config.data.channels == 3:
+                plt.imshow(np.transpose(x_0[i], axes=(1, 2, 0)))
+            plt.axis("off")
+        plt.tight_layout()
+        plt.savefig(
+            f"{path}/generation.png",
+            dpi=400,
+        )
+        plt.close()
 
 
 def format_seconds(seconds):
