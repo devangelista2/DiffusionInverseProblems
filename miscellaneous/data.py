@@ -85,5 +85,20 @@ def load_data(config):
 
             return x_train, []
 
+        case "LSUNChurch":
+            # Define the transform
+            transform = transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+            )
+
+            # Load training set
+            x_train = datasets.LSUN(
+                f"../data/{config.data.data_path}",
+                classes=["church_outdoor_train"],
+                transform=transform,
+            )
+
+            return x_train, []
+
         case _:
             return None
