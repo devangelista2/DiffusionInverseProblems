@@ -11,8 +11,8 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/MNIST.yml"
-TRAIN = False
+CONFIG_PATH = "./configs/CIFAR10.yml"
+TRAIN = True
 
 SAVE_RESULTS = True
 
