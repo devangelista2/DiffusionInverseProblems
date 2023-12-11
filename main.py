@@ -14,14 +14,13 @@ from models.nn import models
 CONFIG_PATH = "./configs/LSUNChurch.yml"
 TRAIN = True
 
-SAVE_RESULTS = True
+SAVE_RESULTS = False
 
 # Load config file
 config = configurations.load_config(CONFIG_PATH)
 
 # Load the data
 x_train, _ = data.load_data(config)
-print(x_train.shape)
 
 # Define DDIM model
 ddim_model = DDIM(config)

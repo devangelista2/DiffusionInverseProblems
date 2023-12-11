@@ -71,7 +71,10 @@ class DDIM(object):
             # Batch steps
             for i, batch in enumerate(train_loader):
                 # Take x_0 from data
-                x_0 = batch  # ADD , _ if batch is a tuple
+                if self.config.data.dataset in ["LSUNChurch"]:
+                    x_0, _ = batch  # ADD , _ if batch is a tuple
+                else:
+                    x_0 = batch
 
                 # Update step
                 step += 1

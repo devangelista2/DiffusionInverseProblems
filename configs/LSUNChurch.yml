@@ -1,11 +1,11 @@
 data:
     data_path: LSUNChurch
     dataset: LSUNChurch
-    image_size: 32
+    image_size: 256
     channels: 3
 
 training:
-    batch_size: 128
+    batch_size: 8
     n_epochs: 100
     loss: 'mse'
 
