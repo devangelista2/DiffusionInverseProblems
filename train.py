@@ -11,10 +11,10 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/LSUNChurch.yml"
-TRAIN = True
+CONFIG_PATH = "./configs/SimpleCelebA.yml"
+TRAIN = False
 
-SAVE_RESULTS = False
+SAVE_RESULTS = True
 
 # Load config file
 config = configurations.load_config(CONFIG_PATH)
