@@ -157,7 +157,7 @@ class DDIM(object):
 
             # Compute x_{t-1} by x_0
             x_t = alpha_t_pred.sqrt() * x_pred + (1 - alpha_t_pred).sqrt() * e_pred
-            x_t = x_t.detach().clone()
+            x_t = x_t.clone()  # .detach().clone()
 
         return x_t
 

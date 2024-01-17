@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from miscellaneous import configurations, data, schedules, utilities
 from models.DDIM import DDIM
 from models.nn import models
-from variational import operators
+from variational import operators, solvers
 
 # SET PARAMETERS
 CONFIG_PATH = "./configs/SimpleCelebA.yml"
@@ -59,6 +59,14 @@ G = utilities.ImageGenerator(config, diffusion_steps=50)
 
 # Define starting point
 if STARTING_POINT == "zeros":
-    x_T = torch.zeros_like(x_true)
+    x_T = torch.zeros_like(x_true, requires_grad=True)
 elif STARTING_POINT == "random":
-    x_T = torch.randn_like(x_true)
+    x_T = torch.randn_like(x_true, requires_grad=True)
+
+# Compute solution by GD
+GDSolver = solvers.GD(K, G, config)
+z_sol = GDSolver(y_delta, lmbda=1e-6, z0=x_T, maxit=50, x_true=x_true, alpha=1)
+x_sol = G(z_sol).detach().cpu().numpy()
+
+plt.imshow(x_sol[0, 0], cmap="gray")
+plt.show()

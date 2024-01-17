@@ -15,73 +15,74 @@ class GD:
         lmbda,
         z0,
         x_true=None,
+        alpha=1,
         maxit=200,
         tolf=1e-3,
         tolx=5e-4,
         verbose=False,
         return_obj=False,
     ):
-        # Initialization
-        if return_obj:
-            obj = torch.zeros((maxit + 1,))
-            obj[0] = self.obj_function(z0, y_delta, lmbda)
-
         # Define starting point
-        z = z0.reshape((self.mx, self.nx))
+        z = z0
+        x = self.G(z)
+
+        # Define optimizer
+        optimizer = torch.optim.Adam([z], lr=1e-3)
+
+        # Initialization
+        obj = torch.zeros((maxit + 1,))
+        obj[0] = self.obj_function(z, x, y_delta, lmbda)
 
         k = 0
         stopping = False
         while not stopping:
-            # Update z and x
-            x = z
+            # Update z_old
+            z_old = torch.clone(z)
+
+            # Compute gradient
+            # optimizer.zero_grad()
+            # obj_k = torch.sum(torch.square(self.K(x) - y_delta)) + lmbda * torch.sum(
+            #    torch.square(z)
+            # )
+            # obj_k.backward(inputs=[z], retain_graph=True)
+            # optimizer.step()
+
+            # Update z
+            obj_k = torch.sum(torch.square(self.K(x) - y_delta)) + lmbda * torch.sum(
+                torch.square(z)
+            )
+            grad_z = torch.autograd.grad(obj_k, z)[0]
+            z.grad = grad_z
+            # z = z_old - alpha * grad_z
+            optimizer.step()
+            z.grad = None
+
+            # Compute x from z
+            x = self.G(z)
 
             # Update k
             k = k + 1
 
-            # Update objective function (if required)
-            if return_obj:
-                obj[k] = self.obj_function(z, y_delta, lmbda)
-            # Print rel.err.
-            if verbose and (x_true is not None):
-                rel_err = torch.linalg.norm(
-                    x.flatten() - x_true.flatten()
-                ) / torch.linalg.norm(x_true.flatten())
-                print(f"{k=}: Rel. Err. = {rel_err:0.4f}.")
+            # Update objective function
+            obj[k] = self.obj_function(z, x, y_delta, lmbda)
 
-            # Compute residual and iterates distance for stopping conditions
-            res = torch.linalg.norm(self.K(x) - y_delta) / torch.max(y_delta)
-            dist = torch.linalg.norm(x_old.flatten() - x.flatten()) / (
-                torch.linalg.norm(x.flatten()) + 1e-6
-            )
+            # Compute distance between iterates
+            dist = torch.norm(z - z_old) / (torch.norm(z) + 1e-6)
+            if x_true is not None:
+                RE = torch.norm(x - x_true) / torch.norm(x_true)
+                print(f"k = {k}. Relative Error: {RE:0.4f}.")
 
-            # Update stopping condition
-            stopping = (
-                (dist < tolx)
-                or ((res / torch.sqrt(len(y_delta))) < tolf)
-                or (k >= maxit)
-            )
-
-        if verbose:
-            print("\n---------------------------")
-            if k >= maxit:
-                print("Algorithm didn't converged.")
-            elif dist < tolx:
-                print("Algorithm converged with x-condition.")
-            elif (res / torch.sqrt(len(y_delta))) < tolf:
-                print("Algorithm converged with f-condition.")
-            print(f"Iterations: \t   {k}.")
-            print(f"Relative Distance: {dist:0.5f}.")
-            print(f"Residual: \t   {res / torch.sqrt(len(y_delta)):0.5f}.")
-            print("---------------------------\n")
-
+            # Check convergence
+            stopping = (k >= maxit - 1) and (dist > tolx) and (obj[k] > tolf)
         if return_obj:
-            return x, obj[:k]
-        return x
+            return z, obj[:k]
+        return z
 
-    def obj_function(self, z, y_delta, lmbda):
+    def obj_function(self, z, x, y_delta, lmbda):
         # Compute the residual and the regularization term
-        x = self.G(z)  # Generate x from z
-        res = torch.norm(self.K(x) - y_delta, p="fro")
-        reg = torch.norm(z, p="fro")
+        res = torch.sum(torch.square(self.K(x) - y_delta))
+        reg = torch.sum(torch.square(z))
 
-        return 0.5 * res**2 + 0.5 * lmbda * reg**2
+        f_k = 0.5 * (res + lmbda * reg)
+
+        return f_k
