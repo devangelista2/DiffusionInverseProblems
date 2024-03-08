@@ -39,3 +39,22 @@ class GaussianBlur:
         kernel = torch.outer(gauss, gauss)
         kernel = kernel / torch.sum(kernel)
         return kernel.unsqueeze(0).unsqueeze(0).repeat((1, self.shape[0], 1, 1))
+    
+
+class Identity:
+    def __init__(self, shape) -> None:
+        """
+        Defines the Identity operator. Shape is a tuple representing the shape of the image 
+        In particular, it has to be a 3-dimensional tuple containing (c, h, w), where
+            c: number of channels,
+            h: height and w: width.
+        """
+        self.shape = shape
+
+        # Get device
+        self.device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        )
+
+    def __call__(self, x):
+        return x

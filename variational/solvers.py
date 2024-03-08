@@ -4,10 +4,12 @@ import torch
 
 
 class GD:
-    def __init__(self, K, G, config):
+    def __init__(self, K, G, config, optimizer=None):
         self.K = K
         self.G = G
         self.config = config
+
+        self.optimizer = optimizer
 
     def __call__(
         self,
@@ -26,8 +28,9 @@ class GD:
         z = z0
         x = self.G(z)
 
-        # Define optimizer
-        optimizer = torch.optim.Adam([z], lr=1e-3)
+        # Define optimizer (if not None)
+        if self.optimizer is not None and self.optimizer.lower() == "adam":
+            optimizer = torch.optim.Adam([z], lr=alpha)
 
         # Initialization
         obj = torch.zeros((maxit + 1,))
@@ -39,23 +42,17 @@ class GD:
             # Update z_old
             z_old = torch.clone(z)
 
-            # Compute gradient
-            # optimizer.zero_grad()
-            # obj_k = torch.sum(torch.square(self.K(x) - y_delta)) + lmbda * torch.sum(
-            #    torch.square(z)
-            # )
-            # obj_k.backward(inputs=[z], retain_graph=True)
-            # optimizer.step()
-
             # Update z
             obj_k = torch.sum(torch.square(self.K(x) - y_delta)) + lmbda * torch.sum(
                 torch.square(z)
             )
-            grad_z = torch.autograd.grad(obj_k, z)[0]
-            z.grad = grad_z
-            # z = z_old - alpha * grad_z
-            optimizer.step()
-            z.grad = None
+            obj_k.backward()
+
+            if self.optimizer is None:
+                z = z_old - alpha * z.grad
+            else:
+                optimizer.step()
+                optimizer.zero_grad()
 
             # Compute x from z
             x = self.G(z)

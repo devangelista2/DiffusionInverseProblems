@@ -71,7 +71,7 @@ class DDIM(object):
             # Batch steps
             for i, batch in enumerate(train_loader):
                 # Take x_0 from data
-                if self.config.data.dataset in ["LSUNChurch"]:
+                if self.config.data.dataset in ["LSUNChurch", "MNIST"]:
                     x_0, _ = batch  # ADD , _ if batch is a tuple
                 else:
                     x_0 = batch
@@ -123,13 +123,19 @@ class DDIM(object):
                 weights_path = f"./model_weights/{self.config.data.dataset}_{self.config.training.loss}.pth"
                 torch.save(self.model.state_dict(), weights_path)
 
-    def reverse_diffusion(self, x_T, diffusion_steps=None):
+    def reverse_diffusion(self, x_T, diffusion_steps=None, training=False):
         """
         NOTE: the diffusion steps can be different from the diffusion steps used in training (accellerated diffusion).
               See DDIM paper for details.
         """
         # Put the model in evaluation mode
         self.model.eval()
+        
+        # If not training
+        if not training:
+            # Disable weights gradient memorization to avoid memory issues.
+            for param in self.model.parameters():
+                param.requires_grad = False
 
         if diffusion_steps is None:
             diffusion_steps = self.num_timesteps
@@ -157,7 +163,6 @@ class DDIM(object):
 
             # Compute x_{t-1} by x_0
             x_t = alpha_t_pred.sqrt() * x_pred + (1 - alpha_t_pred).sqrt() * e_pred
-            x_t = x_t.clone()  # .detach().clone()
 
         return x_t
 

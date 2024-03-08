@@ -18,6 +18,10 @@ class ImageGenerator:
         self.ddim_model = DDIM(config)
         self.ddim_model.model.load_state_dict(torch.load(weights_path))
 
+        # Disable weights gradient memorization to avoid memory issues.
+        for param in self.ddim_model.model.parameters():
+            param.requires_grad = False
+
     def __call__(self, x_T):
         # Send x_T to device
         x_T = x_T.to(self.config.device)
