@@ -39,7 +39,7 @@ class DDIM(object):
         train_loader = data.DataLoader(
             dataset,
             batch_size=self.config.training.batch_size,
-            shuffle=True,
+            shuffle=True
         )
 
         # Define the optimizer

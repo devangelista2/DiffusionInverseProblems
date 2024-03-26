@@ -1,5 +1,4 @@
-from typing import Any
-
+from miscellaneous import utilities
 import torch
 
 
@@ -19,10 +18,11 @@ class GD:
         x_true=None,
         alpha=1,
         maxit=200,
-        tolf=1e-3,
-        tolx=5e-4,
+        tolf=1e-4,
+        tolx=1e-5,
         verbose=False,
         return_obj=False,
+        return_ssim=False,
     ):
         # Define starting point
         z = z0
@@ -35,6 +35,10 @@ class GD:
         # Initialization
         obj = torch.zeros((maxit + 1,))
         obj[0] = self.obj_function(z, x, y_delta, lmbda)
+
+        if x_true is not None:
+            ssim_vec = torch.zeros((maxit + 1,))
+            ssim_vec[0] = utilities.ssim(x, x_true)
 
         k = 0
         stopping = False
@@ -66,13 +70,15 @@ class GD:
             # Compute distance between iterates
             dist = torch.norm(z - z_old) / (torch.norm(z) + 1e-6)
             if x_true is not None:
-                RE = torch.norm(x - x_true) / torch.norm(x_true)
-                print(f"k = {k}. Relative Error: {RE:0.4f}.")
+                ssim_vec[k] = utilities.ssim(x, x_true)
+                print(f"k = {k}. SSIM: {ssim_vec[k]:0.4f}.")
 
             # Check convergence
-            stopping = (k >= maxit - 1) and (dist > tolx) and (obj[k] > tolf)
+            stopping = (k >= maxit - 1) or (dist < tolx) or (obj[k] < tolf)
         if return_obj:
             return z, obj[:k]
+        if return_ssim:
+            return z, ssim_vec[:k]
         return z
 
     def obj_function(self, z, x, y_delta, lmbda):

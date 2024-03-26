@@ -11,7 +11,7 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/MNIST.yml"
+CONFIG_PATH = "./configs/Mayo256.yml"
 TRAIN = True
 
 SAVE_RESULTS = True
@@ -21,6 +21,7 @@ config = configurations.load_config(CONFIG_PATH)
 
 # Load the data
 x_train, _ = data.load_data(config)
+print(x_train[0].shape)
 
 # Define DDIM model
 ddim_model = DDIM(config)

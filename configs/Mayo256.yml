@@ -1,12 +1,12 @@
 data:
-    data_path: ../data/celeba_grayscale
-    dataset: SimpleCelebA
-    image_size: 64
+    data_path: ../data/Mayo
+    dataset: Mayo256
+    image_size: 256
     channels: 1
 
 training:
-    batch_size: 128
-    n_epochs: 100
+    batch_size: 8
+    n_epochs: 200
     loss: 'mse'
 
 optimizer:

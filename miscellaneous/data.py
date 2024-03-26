@@ -1,5 +1,7 @@
+import glob
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision
@@ -27,6 +29,46 @@ class ImageDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+    
+class MayoDataset(Dataset):
+    def __init__(self, data_path, transform=None) -> None:
+        super().__init__()
+
+        # Get transforms
+        self.transform = transform
+
+        # Set the data_path
+        self.data_path = data_path
+        self.train_path = os.path.join(data_path, "train")
+        self.test_path = os.path.join(data_path, "test")
+
+        # Get the filename list
+        self.f_list = self.get_f_list()
+
+        # Compute the shape
+        N = self.__len__()
+        c, m, n = self.__getitem__(0).shape
+        self.shape = (N, c, m, n)
+
+    def __getitem__(self, index):
+        x = plt.imread(self.f_list[index])[:, :, 0:1]
+        x = torch.permute(torch.tensor(x), (2, 0, 1))
+
+        return self.normalize(self.transform(x))
+
+    def __len__(self):
+        return len(self.f_list)
+
+    def get_f_list(self):
+        folders = glob.glob(os.path.join(self.train_path, "*"))
+
+        f_list = []
+        for folder in folders:
+            f_list = f_list + glob.glob(os.path.join(folder, "*"))
+        return tuple(f_list)
+
+    def normalize(self, x):
+        return (x - x.min()) / (x.max() - x.min())
 
 
 def load_data(config):
@@ -82,6 +124,15 @@ def load_data(config):
 
         case "SimpleCelebA":
             x_train = ImageDataset(config)
+
+            return x_train, x_train
+        
+        case "Mayo256":
+            # Define the transform
+            transform = transforms.Resize((config.data.image_size, config.data.image_size))
+
+            # Get dataset
+            x_train = MayoDataset(config.data.data_path, transform=transform)
 
             return x_train, []
 
