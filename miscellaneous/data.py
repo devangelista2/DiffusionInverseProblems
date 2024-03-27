@@ -29,7 +29,8 @@ class ImageDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
-    
+
+
 class MayoDataset(Dataset):
     def __init__(self, data_path, transform=None) -> None:
         super().__init__()
@@ -126,15 +127,28 @@ def load_data(config):
             x_train = ImageDataset(config)
 
             return x_train, x_train
-        
-        case "Mayo256":
+
+        case "Mayo128":
             # Define the transform
-            transform = transforms.Resize((config.data.image_size, config.data.image_size))
+            transform = transforms.Resize(
+                (config.data.image_size, config.data.image_size)
+            )
 
             # Get dataset
             x_train = MayoDataset(config.data.data_path, transform=transform)
 
-            return x_train, []
+            return x_train, x_train
+
+        case "Mayo256":
+            # Define the transform
+            transform = transforms.Resize(
+                (config.data.image_size, config.data.image_size)
+            )
+
+            # Get dataset
+            x_train = MayoDataset(config.data.data_path, transform=transform)
+
+            return x_train, x_train
 
         case "LSUNChurch":
             # Define the transform

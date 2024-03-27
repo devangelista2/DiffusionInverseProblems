@@ -28,7 +28,7 @@ kernel_size = 3
 kernel_variance = 1
 
 # Reconstructor settings
-DIFFUSION_STEPS = 50
+DIFFUSION_STEPS = 10
 LAMBDA = 0  # Regularization parameter
 MAXIT = 300
 ALPHA = 0.01  # Step-size for the optimizer
@@ -77,65 +77,23 @@ x_true = x_true.to(config.device)  # Send x_true to device
 # Verbose
 print(f"Image loaded from {config.data.dataset} dataset. Shape: {x_true.shape}.")
 
-# Compute corrupted data
-y = K(x_true)
-e = torch.randn_like(y)
-y_delta = y + e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * NOISE_LEVEL
-
-# Get Generator
-G = utilities.ImageGenerator(config, diffusion_steps=DIFFUSION_STEPS)
-
-# Define starting point
-torch.manual_seed(42)
-if STARTING_POINT == "zeros":
-    x_T = torch.zeros_like(x_true, requires_grad=True)
-elif STARTING_POINT == "random":
-    x_T = torch.randn_like(x_true, requires_grad=True)
-
-# Compute solution by GD
-GDSolver = solvers.GD(K, G, config, optimizer="adam")
-z_sol, ssim_vec = GDSolver(
-    y_delta,
-    lmbda=LAMBDA,
-    z0=x_T,
-    maxit=MAXIT,
-    x_true=x_true,
-    alpha=ALPHA,
-    return_ssim=True,
-)
-np.save("z.npy", z_sol.detach().cpu().numpy())
+# Generate solution
+z_sol = torch.tensor(np.load("z.npy"))
 x_sol = (
     utilities.ImageGenerator(config, diffusion_steps=200)(z_sol).detach().cpu().numpy()
 )
 
-# Saving
-np.save(
-    f"{BASE_PATH}/ssim_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.npy",
-    ssim_vec,
-)
+plt.figure(figsize=(25, 9))
+plt.subplot(1, 2, 1)
+plt.imshow(x_true.detach().cpu().numpy()[0, 0])
+plt.gray()
+plt.title(r"$x_{true}$", fontsize=20)
+plt.axis("off")
 
-if SAVE_RESULT:
-    plt.figure(figsize=(25, 9))
-    plt.subplot(1, 3, 1)
-    plt.imshow(x_true.detach().cpu().numpy()[0, 0])
-    plt.gray()
-    plt.title(r"$x_{true}$", fontsize=20)
-    plt.axis("off")
+plt.subplot(1, 2, 2)
+plt.imshow(x_sol[0, 0])
+plt.gray()
+plt.axis("off")
+plt.title(r"$x_{DGP}$", fontsize=20)
 
-    plt.subplot(1, 3, 2)
-    plt.imshow(y_delta.detach().cpu().numpy()[0, 0])
-    plt.gray()
-    plt.title(r"$y^{\delta}$", fontsize=20)
-    plt.axis("off")
-
-    plt.subplot(1, 3, 3)
-    plt.imshow(x_sol[0, 0])
-    plt.gray()
-    plt.axis("off")
-    plt.title(r"$x_{DGP}$" + f" (SSIM: {ssim_vec[-1]:0.4f}).", fontsize=20)
-
-    plt.tight_layout()
-    plt.savefig(
-        f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.png"
-    )
-    plt.close()
+plt.show()

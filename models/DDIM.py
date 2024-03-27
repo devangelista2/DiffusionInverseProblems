@@ -37,9 +37,7 @@ class DDIM(object):
     def train(self, dataset):
         # Load data
         train_loader = data.DataLoader(
-            dataset,
-            batch_size=self.config.training.batch_size,
-            shuffle=True
+            dataset, batch_size=self.config.training.batch_size, shuffle=True
         )
 
         # Define the optimizer
@@ -130,7 +128,7 @@ class DDIM(object):
         """
         # Put the model in evaluation mode
         self.model.eval()
-        
+
         # If not training
         if not training:
             # Disable weights gradient memorization to avoid memory issues.

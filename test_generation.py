@@ -11,7 +11,7 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo256.yml"
+CONFIG_PATH = "./configs/Mayo128.yml"
 SAVE_RESULTS = True
 
 # Load config file
