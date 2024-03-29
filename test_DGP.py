@@ -13,8 +13,8 @@ from variational import operators, solvers
 CONFIG_PATH = "./configs/Mayo128.yml"
 
 # Select operatore in: "Identity", "GaussianBlur"
-OPERATOR = "Identity"
-NOISE_LEVEL = 0
+OPERATOR = "GaussianBlur"
+NOISE_LEVEL = 0.04
 
 # Select starting point in: "zeros", "random"
 STARTING_POINT = "random"
@@ -103,10 +103,11 @@ z_sol, ssim_vec = GDSolver(
     alpha=ALPHA,
     return_ssim=True,
 )
-np.save("z.npy", z_sol.detach().cpu().numpy())
-x_sol = (
+
+with torch.no_grad():
+    x_sol = (
     utilities.ImageGenerator(config, diffusion_steps=200)(z_sol).detach().cpu().numpy()
-)
+    )
 
 # Saving
 np.save(
