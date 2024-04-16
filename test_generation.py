@@ -11,7 +11,7 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo128.yml"
+CONFIG_PATH = "./configs/Mayo256.yml"
 SAVE_RESULTS = True
 
 # Load config file
@@ -27,5 +27,5 @@ ddim_model.model.load_state_dict(torch.load(weights_path))
 ddim_model.test_generation(
     path=f"./results/{config.data.dataset}_{config.training.loss}",
     n_samples=16,
-    diffusion_steps=200,
+    diffusion_steps=300,
 )

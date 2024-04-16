@@ -10,7 +10,7 @@ from models.nn import models
 from variational import operators, solvers
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo128.yml"
+CONFIG_PATH = "./configs/Mayo256.yml"
 
 # Select operatore in: "Identity", "GaussianBlur"
 OPERATOR = "GaussianBlur"
@@ -28,8 +28,8 @@ kernel_size = 3
 kernel_variance = 1
 
 # Reconstructor settings
-DIFFUSION_STEPS = 50
-LAMBDA = 0  # Regularization parameter
+DIFFUSION_STEPS = 10
+LAMBDA = 0.01  # Regularization parameter
 MAXIT = 300
 ALPHA = 0.01  # Step-size for the optimizer
 
@@ -79,6 +79,7 @@ print(f"Image loaded from {config.data.dataset} dataset. Shape: {x_true.shape}."
 
 # Compute corrupted data
 y = K(x_true)
+torch.manual_seed(42)
 e = torch.randn_like(y)
 y_delta = y + e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * NOISE_LEVEL
 
@@ -86,7 +87,6 @@ y_delta = y + e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * NOISE_LEVEL
 G = utilities.ImageGenerator(config, diffusion_steps=DIFFUSION_STEPS)
 
 # Define starting point
-torch.manual_seed(42)
 if STARTING_POINT == "zeros":
     x_T = torch.zeros_like(x_true, requires_grad=True)
 elif STARTING_POINT == "random":
@@ -106,7 +106,7 @@ z_sol, ssim_vec = GDSolver(
 
 with torch.no_grad():
     x_sol = (
-    utilities.ImageGenerator(config, diffusion_steps=200)(z_sol).detach().cpu().numpy()
+    utilities.ImageGenerator(config, diffusion_steps=10)(z_sol).detach().cpu().numpy()
     )
 
 # Saving
