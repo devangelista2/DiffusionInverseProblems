@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+import deepinv
+
 from miscellaneous import configurations, data, schedules, utilities
 from models.DDIM import DDIM
 from models.nn import models
@@ -12,9 +14,9 @@ from variational import operators, solvers
 # SET PARAMETERS
 CONFIG_PATH = "./configs/Mayo256.yml"
 
-# Select operatore in: "Identity", "GaussianBlur"
-OPERATOR = "GaussianBlur"
-NOISE_LEVEL = 0.04
+# Select operatore in: "Identity", "GaussianBlur", "Radon"
+OPERATOR = "Radon"
+NOISE_LEVEL = 0
 
 # Select starting point in: "zeros", "random"
 STARTING_POINT = "random"
@@ -27,11 +29,15 @@ TEST_IMAGE = 10
 kernel_size = 3
 kernel_variance = 1
 
+angular_range = [0, 180]
+n_angles = 180
+
 # Reconstructor settings
 DIFFUSION_STEPS = 10
-LAMBDA = 0.01  # Regularization parameter
+LAMBDA = 1e-4  # Regularization parameter
 MAXIT = 300
 ALPHA = 0.01  # Step-size for the optimizer
+REGULARIZER = "Tik_z" # in {Tik_z, TV_z, Tik_x, TV_x}
 
 # Other parameters
 SAVE_RESULT = True
@@ -49,7 +55,9 @@ c, nx, ny = config.data.channels, config.data.image_size, config.data.image_size
 
 # Get operator
 if OPERATOR == "GaussianBlur":
-    K = operators.GaussianBlur(shape=(c, nx, ny))
+    K = operators.GaussianBlur(shape=(c, nx, ny), kernel_size=kernel_size, sigma=kernel_variance)
+elif OPERATOR == "Radon":
+    K = deepinv.physics.Tomography(img_width=nx, angles=torch.linspace(angular_range[0], angular_range[1], n_angles))
 elif OPERATOR == "Identity":
     K = operators.Identity(shape=(c, nx, ny))
 
@@ -93,15 +101,15 @@ elif STARTING_POINT == "random":
     x_T = torch.randn_like(x_true, requires_grad=True)
 
 # Compute solution by GD
-GDSolver = solvers.GD(K, G, config, optimizer="adam")
-z_sol, ssim_vec = GDSolver(
+GDSolver = solvers.GD(K, G, REGULARIZER, config, optimizer="adam")
+z_sol, metrics = GDSolver(
     y_delta,
     lmbda=LAMBDA,
     z0=x_T,
     maxit=MAXIT,
     x_true=x_true,
     alpha=ALPHA,
-    return_ssim=True,
+    return_metrics=True,
 )
 
 with torch.no_grad():
@@ -110,10 +118,11 @@ with torch.no_grad():
     )
 
 # Saving
-np.save(
-    f"{BASE_PATH}/ssim_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.npy",
-    ssim_vec,
-)
+for metric_name in metrics.keys():
+    np.save(
+        f"{BASE_PATH}/{metric_name}_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.npy",
+        metrics[metric_name].detach().numpy(),
+    )
 
 if SAVE_RESULT:
     plt.figure(figsize=(25, 9))
@@ -133,7 +142,7 @@ if SAVE_RESULT:
     plt.imshow(x_sol[0, 0])
     plt.gray()
     plt.axis("off")
-    plt.title(r"$x_{DGP}$" + f" (SSIM: {ssim_vec[-1]:0.4f}).", fontsize=20)
+    plt.title(r"$x_{DGP}$" + f" (SSIM: {metrics["SSIM"].detach().numpy()[-1]:0.4f}).", fontsize=20)
 
     plt.tight_layout()
     plt.savefig(

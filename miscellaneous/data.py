@@ -133,7 +133,7 @@ def load_data(config):
 
             # Load training set
             x_train = datasets.MNIST(
-                f"../data/{config.data.data_path}",
+                f"{config.data.data_path}",
                 train=True,
                 download=True,
                 transform=transform,
@@ -141,7 +141,7 @@ def load_data(config):
 
             # Load test set
             x_test = datasets.MNIST(
-                f"../data/{config.data.data_path}",
+                f"{config.data.data_path}",
                 train=False,
                 download=True,
                 transform=transform,
@@ -157,7 +157,7 @@ def load_data(config):
 
             # Load training set
             x_train = datasets.CIFAR10(
-                f"../data/{config.data.data_path}",
+                f"{config.data.data_path}",
                 train=True,
                 download=True,
                 transform=transform,
@@ -165,7 +165,7 @@ def load_data(config):
 
             # Load test set
             x_test = datasets.CIFAR10(
-                f"../data/{config.data.data_path}",
+                f"{config.data.data_path}",
                 train=False,
                 download=True,
                 transform=transform,
