@@ -11,7 +11,7 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo256.yml"
+CONFIG_PATH = "./configs/ImageNet256.yml"
 TRAIN = True
 
 SAVE_RESULTS = True

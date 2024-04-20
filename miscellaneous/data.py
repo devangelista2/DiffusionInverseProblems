@@ -72,6 +72,56 @@ class MayoDataset(Dataset):
         return (x - x.min()) / (x.max() - x.min())
 
 
+class ImageNetDataset(Dataset):
+    def __init__(self, data_path, transform=None, train=True) -> None:
+        super().__init__()
+        self.train = train
+
+        # Get transforms
+        self.transform = transform
+
+        # Set the data_path
+        self.data_path = data_path
+        self.train_path = os.path.join(data_path, "train")
+        self.test_path = os.path.join(data_path, "test")
+
+        # Get the filename list
+        self.f_list = self.get_f_list()
+
+        # Compute the shape
+        N = self.__len__()
+        c, m, n = self.__getitem__(0).shape
+        self.shape = (N, c, m, n)
+
+    def __getitem__(self, index):
+        x = plt.imread(self.f_list[index])
+        if x.ndim == 3:
+            x = torch.permute(torch.tensor(x), (2, 0, 1))
+        else:
+            x = torch.tensor(x).unsqueeze(0).repeat(3, 1, 1)
+
+        if self.transform is not None:
+            x = self.transform(x)
+        return self.normalize(x)
+
+    def __len__(self):
+        return len(self.f_list)
+
+    def get_f_list(self):
+        if self.train:
+            folders = glob.glob(os.path.join(self.train_path, "*"))
+        else:
+            folders = glob.glob(os.path.join(self.test_path, "*"))
+
+        f_list = []
+        for folder in folders:
+            f_list = f_list + glob.glob(os.path.join(folder, "*"))
+        return tuple(f_list)
+
+    def normalize(self, x):
+        return (x - x.min()) / (x.max() - x.min())
+
+
 def load_data(config):
     # Check wether the dataset is configured
     match config.data.dataset:
@@ -150,6 +200,12 @@ def load_data(config):
 
             return x_train, x_train
 
+        case "ImageNet256":
+            # Get dataset
+            x_train = ImageNetDataset(config.data.data_path)
+
+            return x_train, x_train
+
         case "LSUNChurch":
             # Define the transform
             transform = transforms.Compose(
@@ -172,3 +228,29 @@ def load_data(config):
 
         case _:
             return None
+
+
+def main():
+    import configurations
+    import torch.utils.data as data
+
+    # SET PARAMETERS
+    CONFIG_PATH = "./configs/ImageNet256.yml"
+
+    # Load config file
+    config = configurations.load_config(CONFIG_PATH)
+
+    # Load dataset
+    x_train, _ = load_data(config)
+
+    # Define dataloader
+    train_loader = data.DataLoader(
+        x_train, batch_size=config.training.batch_size, shuffle=True
+    )
+
+    x = next(iter(train_loader))
+    print(x.shape)
+
+
+if __name__ == "__main__":
+    main()

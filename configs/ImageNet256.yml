@@ -1,0 +1,32 @@
+data:
+    data_path: ../data/ImageNet
+    dataset: ImageNet256
+    image_size: 256
+    channels: 3
+
+training:
+    batch_size: 1
+    n_epochs: 200
+    loss: 'mse'
+
+optimizer:
+    weight_decay: 0
+    optimizer: "Adam"
+    lr: 0.0001
+    beta1: 0.9
+    eps: 0.00000001
+
+model:
+    in_ch: 3
+    n_ch: 32
+    n_conv_per_level: 3
+    L: 4
+    ema_rate: 0.9999
+    ema: True
+    resamp_with_conv: True
+
+diffusion:
+    alpha_schedule: improved_cosine
+    alpha_min: 0.02
+    alpha_max: 1.0
+    num_diffusion_timesteps: 1000
