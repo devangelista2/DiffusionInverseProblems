@@ -1,9 +1,10 @@
-import torch
-import deepinv
-import skimage
-import matplotlib.pyplot as plt
 import math
+
+import deepinv
+import matplotlib.pyplot as plt
 import numpy as np
+import skimage
+import torch
 
 # Define device
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

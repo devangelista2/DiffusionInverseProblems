@@ -9,6 +9,7 @@ from models.DDIM import DDIM
 from models.nn import models
 from variational import operators, solvers
 
+
 def update_step(x_t, alpha_t, alpha_t_pred):
     # Send to device
     x_t = x_t.to(device) 

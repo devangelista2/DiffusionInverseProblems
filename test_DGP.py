@@ -4,12 +4,13 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-import deepinv
-
 from miscellaneous import configurations, data, schedules, utilities
 from models.DDIM import DDIM
 from models.nn import models
 from variational import operators, solvers
+
+# import deepinv
+
 
 # SET PARAMETERS
 CONFIG_PATH = "./configs/Mayo256.yml"
@@ -57,7 +58,8 @@ c, nx, ny = config.data.channels, config.data.image_size, config.data.image_size
 if OPERATOR == "GaussianBlur":
     K = operators.GaussianBlur(shape=(c, nx, ny), kernel_size=kernel_size, sigma=kernel_variance)
 elif OPERATOR == "Radon":
-    K = deepinv.physics.Tomography(img_width=nx, angles=torch.linspace(angular_range[0], angular_range[1], n_angles))
+    K = operators.Radon(input_shape=(1, 1, nx, ny), theta=theta, det_size=256)
+    # deepinv.physics.Tomography(img_width=nx, angles=torch.linspace(angular_range[0], angular_range[1], n_angles))
 elif OPERATOR == "Identity":
     K = operators.Identity(shape=(c, nx, ny))
 
@@ -142,7 +144,7 @@ if SAVE_RESULT:
     plt.imshow(x_sol[0, 0])
     plt.gray()
     plt.axis("off")
-    plt.title(r"$x_{DGP}$" + f" (SSIM: {metrics["SSIM"].detach().numpy()[-1]:0.4f}).", fontsize=20)
+    plt.title(r"$x_{DGP}$", fontsize=20)
 
     plt.tight_layout()
     plt.savefig(

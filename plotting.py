@@ -1,7 +1,8 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import glob
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 from miscellaneous import configurations, data, schedules, utilities
 

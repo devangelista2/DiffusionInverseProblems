@@ -1,10 +1,12 @@
+import math
+
+import lpips
 import matplotlib.pyplot as plt
 import torch
-import math
-import lpips
+from skimage.metrics import structural_similarity as ssim_fn
 
 from models.DDIM import DDIM
-from skimage.metrics import structural_similarity as ssim_fn
+
 
 class ImageGenerator:
     def __init__(self, config, diffusion_steps=50):
@@ -35,6 +37,41 @@ class ImageGenerator:
         x_0 = (x_0 - x_0.min()) / (x_0.max() - x_0.min())
 
         return x_0
+    
+class CustomNumpyOperator(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, K, x):
+        """
+        In the forward pass we receive a Tensor containing the input and return
+        a Tensor containing the output. ctx is a context object that can be used
+        to stash information for backward computation. You can cache arbitrary
+        objects for use in the backward pass using the ctx.save_for_backward method.
+
+        K -> Operator that can be applied to Numpy version of x. It requires a __call__ method and a .T.
+        x -> Pytorch array to which K has to be applied.
+        """
+        ctx.save_for_backward(x)
+        ctx.K = K
+
+        x_npy = x.detach().numpy()
+        y_npy = ctx.K(x_npy)
+        y = torch.from_numpy(y_npy)
+        return y
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        """
+        In the backward pass we receive a Tensor containing the gradient of the loss
+        with respect to the output, and we need to compute the gradient of the loss
+        with respect to the input.
+        """
+        (x,) = ctx.saved_tensors
+
+        grad_output_npy = grad_output.numpy()
+        KT_grad_output_npy = ctx.K.T(grad_output_npy)
+        KT_grad_output = torch.from_numpy(KT_grad_output_npy)
+        return KT_grad_output
 
 
 ########################
