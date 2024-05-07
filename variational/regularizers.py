@@ -1,8 +1,11 @@
 import torch
+
 from miscellaneous import utilities
+
 
 def Tik(x):
     return torch.sum(torch.square(x))
+
 
 def TV(x):
     # Get the directional derivatives of x

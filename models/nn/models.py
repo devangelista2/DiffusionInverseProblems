@@ -4,13 +4,15 @@ import torch
 import torch.nn as nn
 
 from ._blocks import DownBlock, ResidualBlock, UpBlock
-from ._utils import Normalize, get_timestep_embedding, sinusoidal_embedding, swish
-
 from ._blocks_attnunet import *
-
 from ._utils import (
-    get_timestep_embedding, Normalize, 
-    zero_module, convert_module_to_f16, convert_module_to_f32
+    Normalize,
+    convert_module_to_f16,
+    convert_module_to_f32,
+    get_timestep_embedding,
+    sinusoidal_embedding,
+    swish,
+    zero_module,
 )
 
 
@@ -82,8 +84,6 @@ class UNet(nn.Module):
             h = up_layer((h, skips.pop()))
 
         return self.out_conv(h)
-
-
 
 
 class AttnUNet(nn.Module):

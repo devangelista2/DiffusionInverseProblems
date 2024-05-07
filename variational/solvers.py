@@ -1,6 +1,7 @@
+import torch
+
 from miscellaneous import utilities
 from variational import regularizers
-import torch
 
 
 class GD:
@@ -40,17 +41,18 @@ class GD:
         obj[0] = self.obj_function(z, x, y_delta, lmbda)
 
         if x_true is not None:
-            # PSNR
-            psnr_vec = torch.zeros((maxit + 1,), requires_grad=False)
-            psnr_vec[0] = utilities.psnr(x, x_true)
+            with torch.no_grad():
+                # PSNR
+                psnr_vec = torch.zeros((maxit + 1,), requires_grad=False)
+                psnr_vec[0] = utilities.psnr(x, x_true)
 
-            # LPIPS
-            lpips_vec = torch.zeros((maxit + 1,), requires_grad=False)
-            lpips_vec[0] = utilities.LPIPS(x, x_true)
-    
-            # SSIM
-            ssim_vec = torch.zeros((maxit + 1,), requires_grad=False)
-            ssim_vec[0] = utilities.ssim(x, x_true)
+                # LPIPS
+                lpips_vec = torch.zeros((maxit + 1,), requires_grad=False)
+                lpips_vec[0] = utilities.LPIPS(x, x_true)
+
+                # SSIM
+                ssim_vec = torch.zeros((maxit + 1,), requires_grad=False)
+                ssim_vec[0] = utilities.ssim(x, x_true)
 
         k = 0
         stopping = False
@@ -82,26 +84,31 @@ class GD:
             # Compute distance between iterates
             dist = torch.norm(z - z_old) / (torch.norm(z) + 1e-6)
             if x_true is not None:
-                psnr_vec[k] = utilities.psnr(x_true, x)
-                lpips_vec[k] = utilities.LPIPS(x_true, x)
-                ssim_vec[k] = utilities.ssim(x_true, x)
-                print(f"k = {k}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f}, SSIM: {ssim_vec[k]:0.4f}.")
+                with torch.no_grad():
+                    psnr_vec[k] = utilities.psnr(x_true, x)
+                    lpips_vec[k] = utilities.LPIPS(x_true, x)
+                    ssim_vec[k] = utilities.ssim(x_true, x)
+                    print(
+                        f"k = {k}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f}, SSIM: {ssim_vec[k]:0.4f}."
+                    )
 
             # Check convergence
             stopping = (k >= maxit - 1) or (dist < tolx) or (obj[k] < tolf)
         if return_obj:
             return z, obj[:k]
         if return_metrics:
-            metrics = {"PSNR": psnr_vec[:k],
-                       "LPIPS": lpips_vec[:k],
-                       "SSIM": ssim_vec[:k]}
+            metrics = {
+                "PSNR": psnr_vec[:k],
+                "LPIPS": lpips_vec[:k],
+                "SSIM": ssim_vec[:k],
+            }
             return z, metrics
         return z
 
     def obj_function(self, z, x, y_delta, lmbda):
         # Compute the residual
         res = torch.sum(torch.square(self.K(x) - y_delta))
-        
+
         # Compute the regularization term
         if self.R == "Tik_z":
             reg = regularizers.Tik(z)

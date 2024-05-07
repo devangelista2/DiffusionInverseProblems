@@ -1,5 +1,6 @@
 import os
 
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -11,7 +12,7 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo256.yml"
+CONFIG_PATH = "./configs/Mayo128.yml"
 SAVE_RESULTS = True
 
 # Load config file

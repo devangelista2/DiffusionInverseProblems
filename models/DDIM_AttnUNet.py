@@ -10,7 +10,7 @@ import torchvision.utils as tvu
 
 from miscellaneous import schedules
 from models.nn.ema import EMAHelper
-from models.nn.models import UNet, AttnUNet
+from models.nn.models import AttnUNet, UNet
 
 
 class DDIM(object):
@@ -22,12 +22,14 @@ class DDIM(object):
         self.alpha = schedules.improved_cosine
 
         # Define the model
-        self.model = AttnUNet(image_size=256,
-                      in_channels=3,
-                      model_channels=64,
-                      out_channels=3,
-                      num_res_blocks=2,
-                      attention_resolutions=[8,16,32]).to(self.device)
+        self.model = AttnUNet(
+            image_size=256,
+            in_channels=3,
+            model_channels=64,
+            out_channels=3,
+            num_res_blocks=2,
+            attention_resolutions=[8, 16, 32],
+        ).to(self.device)
 
         # Define EMA Model
         self.ema_helper = EMAHelper(mu=self.config.model.ema_rate)
@@ -119,9 +121,10 @@ class DDIM(object):
             if (epoch % 10) == 0:
                 weights_path = f"./model_weights/{self.config.data.dataset}_{self.config.training.loss}.pth"
                 torch.save(self.model.state_dict(), weights_path)
-            
+
             # Required when run on SSH machines
             import sys
+
             sys.stdout.flush()
 
     def reverse_diffusion(self, x_T, diffusion_steps=None, training=False):

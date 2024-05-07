@@ -1,23 +1,20 @@
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
 
-from miscellaneous import configurations, data, schedules, utilities
-from models.DDIM import DDIM
-from models.nn import models
+from miscellaneous import configurations, data, utilities
 from variational import operators, solvers
-
-# import deepinv
-
 
 # SET PARAMETERS
 CONFIG_PATH = "./configs/Mayo256.yml"
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
 OPERATOR = "Radon"
-NOISE_LEVEL = 0
+NOISE_LEVEL = 0.01
 
 # Select starting point in: "zeros", "random"
 STARTING_POINT = "random"
@@ -35,10 +32,10 @@ n_angles = 180
 
 # Reconstructor settings
 DIFFUSION_STEPS = 10
-LAMBDA = 1e-4  # Regularization parameter
+LAMBDA = 0  # Regularization parameter
 MAXIT = 300
 ALPHA = 0.01  # Step-size for the optimizer
-REGULARIZER = "Tik_z" # in {Tik_z, TV_z, Tik_x, TV_x}
+REGULARIZER = "Tik_z"  # in {Tik_z, TV_z, Tik_x, TV_x}
 
 # Other parameters
 SAVE_RESULT = True
@@ -56,10 +53,14 @@ c, nx, ny = config.data.channels, config.data.image_size, config.data.image_size
 
 # Get operator
 if OPERATOR == "GaussianBlur":
-    K = operators.GaussianBlur(shape=(c, nx, ny), kernel_size=kernel_size, sigma=kernel_variance)
+    K = operators.GaussianBlur(
+        shape=(c, nx, ny), kernel_size=kernel_size, sigma=kernel_variance
+    )
 elif OPERATOR == "Radon":
-    K = operators.Radon(input_shape=(1, 1, nx, ny), theta=theta, det_size=256)
-    # deepinv.physics.Tomography(img_width=nx, angles=torch.linspace(angular_range[0], angular_range[1], n_angles))
+    angles = np.linspace(
+        np.deg2rad(angular_range[0]), np.deg2rad(angular_range[1]), n_angles
+    )
+    K = operators.Radon(input_shape=(1, c, nx, ny), angles=angles, geometry="fanflat")
 elif OPERATOR == "Identity":
     K = operators.Identity(shape=(c, nx, ny))
 
@@ -89,7 +90,6 @@ print(f"Image loaded from {config.data.dataset} dataset. Shape: {x_true.shape}."
 
 # Compute corrupted data
 y = K(x_true)
-torch.manual_seed(42)
 e = torch.randn_like(y)
 y_delta = y + e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * NOISE_LEVEL
 
@@ -116,7 +116,10 @@ z_sol, metrics = GDSolver(
 
 with torch.no_grad():
     x_sol = (
-    utilities.ImageGenerator(config, diffusion_steps=10)(z_sol).detach().cpu().numpy()
+        utilities.ImageGenerator(config, diffusion_steps=10)(z_sol)
+        .detach()
+        .cpu()
+        .numpy()
     )
 
 # Saving
@@ -135,7 +138,7 @@ if SAVE_RESULT:
     plt.axis("off")
 
     plt.subplot(1, 3, 2)
-    plt.imshow(y_delta.detach().cpu().numpy()[0, 0])
+    plt.imshow(x_true.detach().cpu().numpy()[0, 0])
     plt.gray()
     plt.title(r"$y^{\delta}$", fontsize=20)
     plt.axis("off")

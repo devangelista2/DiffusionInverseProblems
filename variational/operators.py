@@ -1,4 +1,9 @@
+import math
+import os
+
 import torch
+
+from miscellaneous import utilities
 
 
 class GaussianBlur:
@@ -37,12 +42,12 @@ class GaussianBlur:
         kernel = torch.outer(gauss, gauss)
         kernel = kernel / torch.sum(kernel)
         return kernel.unsqueeze(0).unsqueeze(0).repeat((1, self.shape[0], 1, 1))
-    
+
 
 class Identity:
     def __init__(self, shape) -> None:
         """
-        Defines the Identity operator. Shape is a tuple representing the shape of the image 
+        Defines the Identity operator. Shape is a tuple representing the shape of the image
         In particular, it has to be a 3-dimensional tuple containing (c, h, w), where
             c: number of channels,
             h: height and w: width.
@@ -56,3 +61,59 @@ class Identity:
 
     def __call__(self, x):
         return x
+
+
+class Radon:
+    def __init__(self, input_shape, angles, det_size=None, geometry="parallel") -> None:
+        # Input setup
+        self.input_shape = input_shape
+        self.N, self.c, self.h, self.w = input_shape
+
+        # Geometry
+        self.geometry = geometry
+
+        # Projector setup
+        if det_size is None:
+            self.det_size = int(self.h * math.sqrt(2))
+        else:
+            self.det_size = det_size
+        self.angles = angles
+        self.n_angles = len(angles)
+
+        # Define projector
+        self.proj = self.get_astra_projection_operator()
+        self.shape = self.proj.shape
+
+    def __call__(self, x):
+        # Assert the number of channels of x is 1
+        assert x.shape[1] == 1
+
+        # Save x device
+        x_device = x.device
+
+        self.K = utilities.CustomNumpyOperator()
+        y = self.K.apply(self.proj, x[0, 0].cpu().flatten())
+        return y.to(x_device)
+
+    def get_astra_projection_operator(self):
+        import astra
+
+        # create geometries and projector
+        if self.geometry == "parallel":
+            proj_geom = astra.create_proj_geom(
+                "parallel", 1.0, self.det_size, self.angles
+            )
+            vol_geom = astra.create_vol_geom(self.h, self.w)
+            proj_id = astra.create_projector("linear", proj_geom, vol_geom)
+
+        elif self.geometry == "fanflat":
+            proj_geom = astra.create_proj_geom(
+                "fanflat", 1.0, self.det_size, self.angles, 1800, 500
+            )
+            vol_geom = astra.create_vol_geom(self.h, self.w)
+            proj_id = astra.create_projector("cuda", proj_geom, vol_geom)
+
+        else:
+            raise NotImplementedError("Geometry (still) undefined.")
+
+        return astra.OpTomo(proj_id)

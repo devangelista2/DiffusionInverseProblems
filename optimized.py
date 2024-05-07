@@ -12,7 +12,7 @@ from variational import operators, solvers
 
 def update_step(x_t, alpha_t, alpha_t_pred):
     # Send to device
-    x_t = x_t.to(device) 
+    x_t = x_t.to(device)
     alpha_t = alpha_t.to(device)
     alpha_t_pred = alpha_t_pred.to(device)
 
@@ -34,9 +34,7 @@ config = configurations.load_config(CONFIG_PATH)
 BASE_PATH = f"./results/{config.data.dataset}_{config.training.loss}"
 
 # Load trained DDIM Model
-weights_path = (
-    f"./model_weights/{config.data.dataset}_{config.training.loss}.pth"
-)
+weights_path = f"./model_weights/{config.data.dataset}_{config.training.loss}.pth"
 
 ddim = DDIM(config)
 ddim.model.load_state_dict(torch.load(weights_path))
@@ -103,8 +101,10 @@ for step in range(diffusion_steps):
     # x_t_new.backward(x_t.to(device))
     x_t = x_t.to(device).view(-1)
     x_t_new = x_t_new.view(-1)
-    grad_t = torch.autograd.grad(x_t_new, x_t, x_t, retain_graph=True, create_graph=True, allow_unused=True)
-    
+    grad_t = torch.autograd.grad(
+        x_t_new, x_t, x_t, retain_graph=True, create_graph=True, allow_unused=True
+    )
+
     # Compute Jacobian
     jacobian = torch.cat([grad.view(-1) for grad in grad_t])
     print(jacobian.shape)
@@ -117,4 +117,4 @@ for step in range(diffusion_steps):
     x_t = x_t.detach().requires_grad_(True)
 x_t = x_t.cpu().detach().numpy()
 
-plt.imsave("x_gen.png", x_t[0, 0], cmap='gray')
+plt.imsave("x_gen.png", x_t[0, 0], cmap="gray")

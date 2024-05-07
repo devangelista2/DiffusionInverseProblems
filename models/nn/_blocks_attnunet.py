@@ -1,16 +1,19 @@
+import math
 from abc import abstractmethod
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import math
-
 from ._utils import (
-    get_timestep_embedding, Normalize, 
-    zero_module, checkpoint,
-    convert_module_to_f16, convert_module_to_f32
+    Normalize,
+    checkpoint,
+    convert_module_to_f16,
+    convert_module_to_f32,
+    get_timestep_embedding,
+    zero_module,
 )
+
 
 # ----------------------------------------
 # Modules dedicate to Timestep operations

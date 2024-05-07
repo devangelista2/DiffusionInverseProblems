@@ -3,6 +3,7 @@ import math
 import torch
 from torch import nn
 
+
 # ----------------------------------------
 # Change model to single - half precision
 # ----------------------------------------
