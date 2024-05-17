@@ -9,11 +9,11 @@ from torch.utils.data import DataLoader
 from miscellaneous import configurations, data, schedules
 
 # from models.DDIM import DDIM
-from models.DDIM_AttnUNet import DDIM
+from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/ImageNet256.yml"
+CONFIG_PATH = "./configs/SimpleShapes.yml"
 TRAIN = True
 
 SAVE_RESULTS = True
@@ -28,7 +28,7 @@ print(x_train[0].shape)
 # Define DDIM model
 ddim_model = DDIM(config)
 
-# Train if required, else load weights
+# Train if required, else load weigsazhts
 if TRAIN:
     ddim_model.train(x_train)
 else:

@@ -10,9 +10,9 @@ from torchvision import datasets, transforms
 
 
 class ImageDataset(Dataset):
-    def __init__(self, config):
+    def __init__(self, config, mode="train"):
         # Load data from numpy array
-        self.data = np.load(os.path.join(config.data.data_path, "train.npy"))
+        self.data = np.load(os.path.join(config.data.data_path, f"{mode}.npy"))
 
         # Convert the data (B, D, D, C) -> (B, C, D, D)
         self.data = torch.permute(torch.tensor(self.data), (0, 3, 1, 2))
@@ -124,110 +124,122 @@ class ImageNetDataset(Dataset):
 
 def load_data(config):
     # Check wether the dataset is configured
-    match config.data.dataset:
-        case "MNIST":
-            # Define the transform
-            transform = transforms.Compose(
-                [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
-            )
+    if config.data.dataset == "MNIST":
+        # Define the transform
+        transform = transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+        )
 
-            # Load training set
-            x_train = datasets.MNIST(
-                f"{config.data.data_path}",
-                train=True,
-                download=True,
-                transform=transform,
-            )
+        # Load training set
+        x_train = datasets.MNIST(
+            f"{config.data.data_path}",
+            train=True,
+            download=True,
+            transform=transform,
+        )
 
-            # Load test set
-            x_test = datasets.MNIST(
-                f"{config.data.data_path}",
-                train=False,
-                download=True,
-                transform=transform,
-            )
+        # Load test set
+        x_test = datasets.MNIST(
+            f"{config.data.data_path}",
+            train=False,
+            download=True,
+            transform=transform,
+        )
 
-            return x_train, x_test
+        return x_train, x_test
 
-        case "CIFAR10":
-            # Define the transform
-            transform = transforms.Compose(
-                [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
-            )
+    elif config.data.dataset == "CIFAR10":
+        # Define the transform
+        transform = transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+        )
 
-            # Load training set
-            x_train = datasets.CIFAR10(
-                f"{config.data.data_path}",
-                train=True,
-                download=True,
-                transform=transform,
-            )
+        # Load training set
+        x_train = datasets.CIFAR10(
+            f"{config.data.data_path}",
+            train=True,
+            download=True,
+            transform=transform,
+        )
 
-            # Load test set
-            x_test = datasets.CIFAR10(
-                f"{config.data.data_path}",
-                train=False,
-                download=True,
-                transform=transform,
-            )
+        # Load test set
+        x_test = datasets.CIFAR10(
+            f"{config.data.data_path}",
+            train=False,
+            download=True,
+            transform=transform,
+        )
 
-            return x_train, x_test
+        return x_train, x_test
 
-        case "SimpleCelebA":
-            x_train = ImageDataset(config)
+    elif config.data.dataset == "SimpleCelebA":
+        x_train = ImageDataset(config, mode="train")
+        x_test  = ImageDataset(config, mode="test")
 
-            return x_train, x_train
+        return x_train, x_test
 
-        case "Mayo128":
-            # Define the transform
-            transform = transforms.Resize(
-                (config.data.image_size, config.data.image_size)
-            )
+    elif config.data.dataset == "Shapes":
+        x_train = ImageDataset(config, mode="train")
+        x_test  = ImageDataset(config, mode="test")
 
-            # Get dataset
-            x_train = MayoDataset(config.data.data_path, transform=transform)
+        return x_train, x_test
+    
+    elif config.data.dataset == "SimpleShapes":
+        x_train = ImageDataset(config, mode="train")
+        x_test  = ImageDataset(config, mode="test")
 
-            return x_train, x_train
+        return x_train, x_test
 
-        case "Mayo256":
-            # Define the transform
-            transform = transforms.Resize(
-                (config.data.image_size, config.data.image_size)
-            )
+    elif config.data.dataset == "Mayo128":
+        # Define the transform
+        transform = transforms.Resize(
+            (config.data.image_size, config.data.image_size)
+        )
 
-            # Get dataset
-            x_train = MayoDataset(config.data.data_path, transform=transform)
+        # Get dataset
+        x_train = MayoDataset(config.data.data_path, transform=transform)
 
-            return x_train, x_train
+        return x_train, x_train
 
-        case "ImageNet256":
-            # Get dataset
-            x_train = ImageNetDataset(config.data.data_path)
+    elif config.data.dataset == "Mayo256":
+        # Define the transform
+        transform = transforms.Resize(
+            (config.data.image_size, config.data.image_size)
+        )
 
-            return x_train, x_train
+        # Get dataset
+        x_train = MayoDataset(config.data.data_path, transform=transform)
 
-        case "LSUNChurch":
-            # Define the transform
-            transform = transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.CenterCrop(
-                        (config.data.image_size, config.data.image_size)
-                    ),
-                ]
-            )
+        return x_train, x_train
 
-            # Load training set
-            x_train = datasets.LSUN(
-                f"../data/{config.data.data_path}",
-                classes=["church_outdoor_train"],
-                transform=transform,
-            )
+    elif config.data.dataset == "ImageNet256":
+        # Get dataset
+        x_train = ImageNetDataset(config.data.data_path)
 
-            return x_train, []
+        return x_train, x_train
 
-        case _:
-            return None
+    elif config.data.dataset == "LSUNChurch":
+        # Define the transform
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.CenterCrop(
+                    (config.data.image_size, config.data.image_size)
+                ),
+            ]
+        )
+
+        # Load training set
+        x_train = datasets.LSUN(
+            f"../data/{config.data.data_path}",
+            classes=["church_outdoor_train"],
+            transform=transform,
+        )
+
+        return x_train, []
+
+    else:
+        return None
 
 
 def main():

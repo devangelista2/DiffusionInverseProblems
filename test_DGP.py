@@ -1,6 +1,5 @@
-import os
 
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,8 +12,8 @@ from variational import operators, solvers
 CONFIG_PATH = "./configs/Mayo256.yml"
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
-OPERATOR = "Radon"
-NOISE_LEVEL = 0.01
+OPERATOR = "GaussianBlur"
+NOISE_LEVEL = 0.00
 
 # Select starting point in: "zeros", "random"
 STARTING_POINT = "random"
@@ -28,14 +27,16 @@ kernel_size = 3
 kernel_variance = 1
 
 angular_range = [0, 180]
-n_angles = 180
+n_angles = 120
 
 # Reconstructor settings
 DIFFUSION_STEPS = 10
-LAMBDA = 0  # Regularization parameter
-MAXIT = 300
-ALPHA = 0.01  # Step-size for the optimizer
-REGULARIZER = "Tik_z"  # in {Tik_z, TV_z, Tik_x, TV_x}
+LAMBDA = 1e-4
+# Regularization parameter
+MAXIT = 800
+ALPHA = 1e-3
+  # Step-size for the optimizer
+REGULARIZER = "TV_x" # in {Tik_z, TV_z, Tik_x, TV_x}
 
 # Other parameters
 SAVE_RESULT = True
@@ -90,6 +91,7 @@ print(f"Image loaded from {config.data.dataset} dataset. Shape: {x_true.shape}."
 
 # Compute corrupted data
 y = K(x_true)
+torch.manual_seed(42)
 e = torch.randn_like(y)
 y_delta = y + e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * NOISE_LEVEL
 
@@ -100,6 +102,7 @@ G = utilities.ImageGenerator(config, diffusion_steps=DIFFUSION_STEPS)
 if STARTING_POINT == "zeros":
     x_T = torch.zeros_like(x_true, requires_grad=True)
 elif STARTING_POINT == "random":
+    torch.manual_seed(42)
     x_T = torch.randn_like(x_true, requires_grad=True)
 
 # Compute solution by GD
@@ -150,7 +153,15 @@ if SAVE_RESULT:
     plt.title(r"$x_{DGP}$", fontsize=20)
 
     plt.tight_layout()
+
+#     plt.figure()
+#     plt.imshow(x_sol[0, 0])
+#     plt.gray()
+#     plt.axis("off")
+#    # plt.title(r"$x_{DGP}$", fontsize=20)
+#     plt.tight_layout()
     plt.savefig(
         f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.png"
     )
     plt.close()
+    plt.imsave(f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}_{REGULARIZER}.png",x_sol[0,0],cmap='gray')

@@ -50,11 +50,10 @@ class DDIM(object):
         )
 
         # Define the loss function
-        match self.config.training.loss.lower():
-            case "mse":
-                self.loss_fn = torch.nn.MSELoss()
-            case "mae":
-                self.loss_fn = torch.nn.L1Loss()
+        if self.config.training.loss.lower() == "mse":
+            self.loss_fn = torch.nn.MSELoss()
+        elif self.config.training.loss.lower() == "mae":
+            self.loss_fn = torch.nn.L1Loss()
 
         # Compute the total number of steps per epoch
         steps_per_epoch = len(dataset) // self.config.training.batch_size

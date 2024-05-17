@@ -1,6 +1,5 @@
 import os
 
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -12,7 +11,7 @@ from models.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo128.yml"
+CONFIG_PATH = "./configs/SimpleShapes.yml"
 SAVE_RESULTS = True
 
 # Load config file
@@ -28,5 +27,5 @@ ddim_model.model.load_state_dict(torch.load(weights_path))
 ddim_model.test_generation(
     path=f"./results/{config.data.dataset}_{config.training.loss}",
     n_samples=16,
-    diffusion_steps=300,
+    diffusion_steps=200,
 )
