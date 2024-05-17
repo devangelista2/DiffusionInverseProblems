@@ -10,7 +10,7 @@ import torchvision.utils as tvu
 
 from miscellaneous import schedules
 from models.nn.ema import EMAHelper
-from models.nn.models import UNet
+from models.nn.models import ConditionedUNet
 
 
 class DDIM(object):
@@ -22,7 +22,7 @@ class DDIM(object):
         self.alpha = schedules.improved_cosine
 
         # Define the model
-        self.model = UNet(
+        self.model = ConditionedUNet(
             config.model.in_ch,
             config.model.n_ch,
             config.model.n_conv_per_level,

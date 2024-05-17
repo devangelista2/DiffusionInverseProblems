@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from miscellaneous import configurations, data, schedules
 
 # from models.DDIM import DDIM
-from models.DDIM import DDIM
+from models.DiffusionModels.DDIM import DDIM
 from models.nn import models
 
 # SET PARAMETERS

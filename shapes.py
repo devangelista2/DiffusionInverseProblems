@@ -23,8 +23,8 @@ test_images = np.zeros((N_test, nx, ny))
 for i in range(N_train):
     # CIRCLES
     for _ in range(n_circles):
-        C = np.random.randint(radius_M, nx - radius_M - 1, size=(2, )) # Center
-        R = np.random.randint(radius_m, radius_M, size=(1,)) # Radius
+        C = np.random.randint(radius_M, nx - radius_M - 1, size=(2,))  # Center
+        R = np.random.randint(radius_m, radius_M, size=(1,))  # Radius
         intensity = np.random.uniform(0, 1, size=(1,))
 
         # Draw circle
@@ -35,23 +35,28 @@ for i in range(N_train):
 
     # RECTANGLES
     for _ in range(n_rectangles):
-        vertex1 = np.random.randint(0, nx - l_max, (2, ))
-        vertex2 = vertex1 + np.random.randint(l_min, l_max, (2, ))
+        vertex1 = np.random.randint(0, nx - l_max, (2,))
+        vertex2 = vertex1 + np.random.randint(l_min, l_max, (2,))
         intensity = np.random.uniform(0, 1, size=(1,))
 
         # Draw rectangle
-        cv2.rectangle(train_images[i, :, :], (int(vertex1[0]), int(vertex1[1])), 
-                      (int(vertex2[0]), int(vertex2[1])), intensity, -1)
+        cv2.rectangle(
+            train_images[i, :, :],
+            (int(vertex1[0]), int(vertex1[1])),
+            (int(vertex2[0]), int(vertex2[1])),
+            intensity,
+            -1,
+        )
     # Scale for uint conversion
     train_images[i, :, :] = train_images[i, :, :] / train_images[i, :, :].max() * 255
-        
+
 
 #### TEST SET
 for i in range(N_test):
     # CIRCLES
     for _ in range(n_circles):
-        C = np.random.randint(radius_M, nx - radius_M - 1, size=(2, )) # Center
-        R = np.random.randint(radius_m, radius_M, size=(1,)) # Radius
+        C = np.random.randint(radius_M, nx - radius_M - 1, size=(2,))  # Center
+        R = np.random.randint(radius_m, radius_M, size=(1,))  # Radius
         intensity = np.random.uniform(0, 1, size=(1,))
 
         # Draw circle
@@ -59,15 +64,20 @@ for i in range(N_test):
 
     # RECTANGLES
     for _ in range(n_rectangles):
-        vertex1 = np.random.randint(0, nx - l_max, (2, ))
-        vertex2 = vertex1 + np.random.randint(l_min, l_max, (2, ))
+        vertex1 = np.random.randint(0, nx - l_max, (2,))
+        vertex2 = vertex1 + np.random.randint(l_min, l_max, (2,))
         intensity = np.random.uniform(0, 1, size=(1,))
 
         # Draw rectangle
-        cv2.rectangle(test_images[i, :, :], (int(vertex1[0]), int(vertex1[1])), 
-                      (int(vertex2[0]), int(vertex2[1])), intensity, -1)
+        cv2.rectangle(
+            test_images[i, :, :],
+            (int(vertex1[0]), int(vertex1[1])),
+            (int(vertex2[0]), int(vertex2[1])),
+            intensity,
+            -1,
+        )
     # Scale for uint conversion
     test_images[i, :, :] = test_images[i, :, :] / test_images[i, :, :].max() * 255
-        
-np.save('./train.npy', train_images.astype(np.uint8))
-np.save('./test.npy', test_images.astype(np.uint8))
+
+np.save("./train.npy", train_images.astype(np.uint8))
+np.save("./test.npy", test_images.astype(np.uint8))

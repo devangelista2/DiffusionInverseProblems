@@ -10,7 +10,7 @@ import torchvision.utils as tvu
 
 from miscellaneous import schedules
 from models.nn.ema import EMAHelper
-from models.nn.models import AttnUNet, UNet
+from models.nn.models import ConditionedAttnUNet
 
 
 class DDIM(object):
@@ -22,7 +22,7 @@ class DDIM(object):
         self.alpha = schedules.improved_cosine
 
         # Define the model
-        self.model = AttnUNet(
+        self.model = ConditionedAttnUNet(
             image_size=256,
             in_channels=3,
             model_channels=64,

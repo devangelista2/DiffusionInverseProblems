@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import torch
 from skimage.metrics import structural_similarity as ssim_fn
 
-from models.DDIM import DDIM
+from models.DiffusionModels.DDIM import DDIM
 
 
 class ImageGenerator:

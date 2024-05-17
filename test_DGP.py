@@ -1,4 +1,3 @@
-
 import os
 
 import matplotlib.pyplot as plt
@@ -34,9 +33,8 @@ DIFFUSION_STEPS = 10
 LAMBDA = 1e-4
 # Regularization parameter
 MAXIT = 800
-ALPHA = 1e-3
-  # Step-size for the optimizer
-REGULARIZER = "TV_x" # in {Tik_z, TV_z, Tik_x, TV_x}
+ALPHA = 1e-3  # Step-size for the optimizer
+REGULARIZER = "TV_x"  # in {Tik_z, TV_z, Tik_x, TV_x}
 
 # Other parameters
 SAVE_RESULT = True
@@ -154,14 +152,18 @@ if SAVE_RESULT:
 
     plt.tight_layout()
 
-#     plt.figure()
-#     plt.imshow(x_sol[0, 0])
-#     plt.gray()
-#     plt.axis("off")
-#    # plt.title(r"$x_{DGP}$", fontsize=20)
-#     plt.tight_layout()
+    #     plt.figure()
+    #     plt.imshow(x_sol[0, 0])
+    #     plt.gray()
+    #     plt.axis("off")
+    #    # plt.title(r"$x_{DGP}$", fontsize=20)
+    #     plt.tight_layout()
     plt.savefig(
         f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.png"
     )
     plt.close()
-    plt.imsave(f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}_{REGULARIZER}.png",x_sol[0,0],cmap='gray')
+    plt.imsave(
+        f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}_{REGULARIZER}.png",
+        x_sol[0, 0],
+        cmap="gray",
+    )
