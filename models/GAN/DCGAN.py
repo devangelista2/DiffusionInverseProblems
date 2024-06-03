@@ -10,9 +10,8 @@ class Generator(nn.Module):
     def __init__(
         self,
         input_shape: tuple[int],
+        latent_dim: int,
         n_ch: int = 32,
-        n_conv_per_level: int = 2,
-        L: int = 4,
     ) -> None:
         r"""
         input_shape: tuple[int] -> (c, h, w), the shape of input noise
@@ -22,12 +21,31 @@ class Generator(nn.Module):
         self.input_shape = input_shape
         self.c, self.h, self.w = self.input_shape
 
+        self.latent_dim = latent_dim
         self.n_ch = n_ch
-        self.n_conv_per_level = n_conv_per_level
-        self.L = L
 
-        # Define UNet model
-        self.model = UNet(self.c, self.n_ch, self.n_conv_per_level, self.L)
+        # Define forward model
+        self.layers = nn.Sequential(
+            # Input: latent_dim x 1 x 1
+            nn.ConvTranspose2d(latent_dim, n_ch * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(n_ch * 8),
+            nn.ReLU(True),
+            # Output: (n_ch * 8) x 4 x 4
+            
+            nn.ConvTranspose2d(n_ch * 8, n_ch * 4, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(n_ch * 4),
+            nn.ReLU(True),
+            # Output: (n_ch * 4) x 7 x 7
+            
+            nn.ConvTranspose2d(n_ch * 4, n_ch * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(n_ch * 2),
+            nn.ReLU(True),
+            # Output: (n_ch * 2) x 14 x 14
+            
+            nn.ConvTranspose2d(n_ch * 2, self.c, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # Output: img_channels x 28 x 28
+        )
 
     def forward(self, z):
         return self.model(z)

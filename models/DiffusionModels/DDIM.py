@@ -1,4 +1,3 @@
-import datetime
 import os
 import time
 
@@ -6,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.utils.data as data
-import torchvision.utils as tvu
 
 from miscellaneous import schedules
 from models.nn.ema import EMAHelper
@@ -66,19 +64,7 @@ class DDIM(object):
             print(f"Epoch: {epoch+1}/{self.config.training.n_epochs}:")
 
             # Batch steps
-            for i, batch in enumerate(train_loader):
-                # Take x_0 from data
-                if self.config.data.dataset in ["LSUNChurch", "MNIST"]:
-                    x_0, _ = batch  # ADD , _ if batch is a tuple
-                else:
-                    x_0 = batch
-
-                # Update step
-                step += 1
-
-                # Get batch size
-                batch_size = x_0.size(0)
-
+            for i, x_0 in enumerate(train_loader):
                 # Put the model in training mode (for BatchNormalization and Dropout layers)
                 self.model.train()
 
@@ -87,7 +73,7 @@ class DDIM(object):
                 eps_t = torch.randn_like(x_0).to(self.device)
 
                 # sample time in the interval [0, 1]
-                t = torch.rand((batch_size, 1, 1, 1)).to(self.device)
+                t = torch.rand((x_0.size(0), 1, 1, 1)).to(self.device)
 
                 # Compute corrupted x
                 alpha_t = self.alpha(t, self.config).to(self.device)
@@ -103,7 +89,7 @@ class DDIM(object):
                 total_loss = total_loss + loss.item()
                 time_elapsed = format_seconds(seconds=time.time() - start_time)
                 print(
-                    f"Iteration: {step}/{steps_per_epoch}, Time elapsed: {time_elapsed}, Loss: {total_loss/(i+1):0.4f}.",
+                    f"Iteration: {i+1}/{steps_per_epoch}, Time elapsed: {time_elapsed}, Loss: {total_loss/(i+1):0.4f}.",
                     end="\r",
                 )
 
