@@ -1,44 +1,27 @@
-import os
-
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-
-from miscellaneous import configurations, data, schedules
-
-# from models.DDIM import DDIM
-from models.DiffusionModels.DDIM import DDIM
-from models.nn import models
+from miscellaneous import configurations, data, utilities
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/SimpleShapes.yml"
+CONFIG_PATH = "./configs/Mayo128.yml"
+GENERATIVE_MODEL = "StyleGANv2"
 TRAIN = True
-
-SAVE_RESULTS = True
 
 # Load config file
 config = configurations.load_config(CONFIG_PATH)
 
 # Load the data
 x_train, _ = data.load_data(config)
-print(x_train[0].shape)
 
-# Define DDIM model
-ddim_model = DDIM(config)
-
-# Train if required, else load weigsazhts
+# Train if required, else load weigths
 if TRAIN:
-    ddim_model.train(x_train)
+    # Define generative model
+    model = utilities.get_model(GENERATIVE_MODEL, config)
+    model.train(x_train)
 else:
-    weights_path = f"./model_weights/{config.data.dataset}_{config.training.loss}.pth"
-    ddim_model.model.load_state_dict(torch.load(weights_path))
+    weights_path = f"./model_weights/{GENERATIVE_MODEL}/{config.data.dataset}_{config.training.loss}.pth"
+    model = utilities.get_model(GENERATIVE_MODEL, config, weights_path=weights_path)
 
 # Test the model if required
-if SAVE_RESULTS:
-    ddim_model.test_generation(
-        path=f"./results/{config.data.dataset}_{config.training.loss}",
-        n_samples=16,
-        diffusion_steps=200,
-    )
+model.test_generation(
+    path=f"./results/{config.data.dataset}_{config.training.loss}",
+    n_samples=16,
+)

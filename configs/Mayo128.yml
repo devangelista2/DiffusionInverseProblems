@@ -30,3 +30,13 @@ diffusion:
     alpha_min: 0.02
     alpha_max: 1.0
     num_diffusion_timesteps: 1000
+
+DCGAN:
+    latent_dim: 100
+
+StyleGANv2:
+    z_dim: 512
+    w_dim: 512
+    n_mapping_layers: 8
+    lambda_r1: 10
+    lambda_pl: 2

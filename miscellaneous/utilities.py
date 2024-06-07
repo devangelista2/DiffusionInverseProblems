@@ -1,45 +1,63 @@
-import math
-import os
-
-import lpips
-import matplotlib.pyplot as plt
 import torch
-from skimage.metrics import structural_similarity as ssim_fn
+import numpy as np
+
+from variational import operators
 
 from models.DiffusionModels.DDIM import DDIM
+from models.GAN.DCGAN import DCGAN
+from models.GAN.StyleGANv2 import StyleGANv2
+
+########################
+# MODEL UTILITIES
+########################
+def get_model(model_name, config, weights_path=None):
+    # Define generative model
+    if model_name == "DDIM":
+        model = DDIM(config)
+    elif model_name == "DCGAN":
+        model = DCGAN(config)
+    elif model_name == "StyleGANv2":
+        model = StyleGANv2(config)
+    else:
+        raise NotImplementedError
+    
+    if weights_path is not None:
+        # Load trained model
+        model.load(weights_path)
+    return model
 
 
-class ImageGenerator:
-    def __init__(self, config, diffusion_steps=50):
-        self.config = config
-        self.diffusion_steps = diffusion_steps
+def get_operator(operator_name, operator_setup):
+    operator_shape = operator_setup["shape"]
 
-        # Load trained DDIM Model
-        weights_path = (
-            f"./model_weights/{config.data.dataset}_{config.training.loss}.pth"
+    if operator_name == "GaussianBlur":
+        kernel_size = operator_setup["kernel_size"]
+        kernel_variance = operator_setup["kernel_variance"]
+
+        K = operators.GaussianBlur(
+            shape=operator_shape, kernel_size=kernel_size, sigma=kernel_variance
         )
-        self.ddim_model = DDIM(config)
-        self.ddim_model.model.load_state_dict(torch.load(weights_path))
+    elif operator_name == "Radon":
+        angular_range = operator_setup["angular_range"]
+        n_angles = operator_setup["n_angles"]
 
-        # Disable weights gradient memorization to avoid memory issues.
-        for param in self.ddim_model.model.parameters():
-            param.requires_grad = False
-
-    def __call__(self, x_T):
-        # Send x_T to device
-        x_T = x_T.to(self.config.device)
-
-        # Generate x_0
-        x_0 = self.ddim_model.reverse_diffusion(
-            x_T, diffusion_steps=self.diffusion_steps
+        angles = np.linspace(
+            np.deg2rad(angular_range[0]), np.deg2rad(angular_range[1]), n_angles
         )
+        K = operators.Radon(input_shape=(1,) + operator_shape, angles=angles, geometry="fanflat")
+    elif operator_name == "Identity":
+        K = operators.Identity(shape=operator_shape)
+    
+    return K
 
-        # Normalize x_0
-        x_0 = (x_0 - x_0.min()) / (x_0.max() - x_0.min())
+def gaussian_noise(y, noise_level, seed=42):
+    torch.manual_seed(seed)
+    e = torch.randn_like(y)
+    return e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * noise_level
 
-        return x_0
-
-
+########################
+# PYTORCH UTILITIES
+########################
 class CustomNumpyOperator(torch.autograd.Function):
 
     @staticmethod
@@ -74,125 +92,6 @@ class CustomNumpyOperator(torch.autograd.Function):
         KT_grad_output_npy = ctx.K.T(grad_output_npy)
         KT_grad_output = torch.from_numpy(KT_grad_output_npy)
         return None, KT_grad_output
-
-
-########################
-# METRICS
-########################
-def ssim(x_true, x_pred):
-    """
-    Computes and returns the SSIM between x_true and x_pred. Both are assumed to be pytorch Tensors of
-    shape (N, c, h, w), where:
-        N -> Number of samples.
-        c -> Number of channels.
-        h,w -> Shape of the image.
-    Moreover, both x_true and x_pred are assumed to be normalized in [0, 1]. The function output is a Tensor
-    of shape (N, ) containing at each position the value of the SSIM of the i-th image.
-    """
-    # Get shape
-    N, c, h, w = x_true.shape
-
-    # Initalize output
-    ssim_vec = torch.zeros((N,))
-
-    # Move both to cpu and than numpy if required.
-    x_true_det = x_true.detach().cpu().numpy()
-    x_pred_det = x_pred.detach().cpu().numpy()
-
-    # Cycle on the samples
-    for i in range(N):
-        if c == 1:
-            # B-W images
-            ssim_vec[i] = ssim_fn(x_true_det[i, 0], x_pred_det[i, 0], data_range=1)
-        else:
-            # RGB images
-            ssim_vec[i] = ssim_fn(x_true_det[i], x_pred_det[i], data_range=1)
-
-    # If N == 1 -> Return just its value
-    if N == 1:
-        return ssim_vec[0]
-    return ssim_vec
-
-
-def psnr(x_true, x_pred):
-    """
-    Computes and returns the psnr between x_true and x_pred. Both are assumed to be pytorch Tensors of
-    shape (N, c, h, w), where:
-        N -> Number of samples.
-        c -> Number of channels.
-        h,w -> Shape of the image.
-    Moreover, both x_true and x_pred are assumed to be normalized in [0, 1]. The function output is a Tensor
-    of shape (N, ) containing at each position the value of the psnr of the i-th image.
-    """
-    # Get shape
-    N, c, h, w = x_true.shape
-
-    # Initalize output
-    psnr_vec = torch.zeros((N,))
-
-    # Move both to cpu and than numpy if required.
-    x_true_det = x_true.detach().cpu()
-    x_pred_det = x_pred.detach().cpu()
-
-    # Cycle on the samples
-    for i in range(N):
-        # Measure max pixel value
-        max_pixel = x_true_det.max()
-
-        # Compute mse
-        mse = torch.mean(torch.square(x_true_det[i] - x_pred_det[i]))
-
-        # Compute PSNR
-        psnr_vec[i] = 20 * math.log10(max_pixel / math.sqrt(mse))
-
-    # If N == 1 -> Return just its value
-    if N == 1:
-        return psnr_vec[0]
-    return psnr_vec
-
-
-# Setup the LPIPS metric (done just once)
-lpips_alex = lpips.LPIPS(net="alex")
-
-
-def LPIPS(x_true, x_pred):
-    """
-    Computes and returns the LPIPS between x_true and x_pred. Both are assumed to be pytorch Tensors of
-    shape (N, c, h, w), where:
-        N -> Number of samples.
-        c -> Number of channels.
-        h,w -> Shape of the image.
-    Moreover, both x_true and x_pred are assumed to be normalized in [0, 1]. The function output is a Tensor
-    of shape (N, ) containing at each position the value of the LPIPS of the i-th image.
-    """
-
-    # Get shape
-    N, c, h, w = x_true.shape
-
-    # Initalize output
-    LPIPS_vec = torch.zeros((N,))
-
-    # Move both to cpu and than numpy if required.
-    x_true_det = x_true.detach().cpu()
-    x_pred_det = x_pred.detach().cpu()
-
-    # Normalize in [-1, 1]
-    x_true_det = 2 * x_true_det - 1
-    x_pred_det = 2 * x_pred_det - 1
-
-    # Cycle on the samples
-    for i in range(N):
-        if c == 1:
-            # B-W image
-            x_true_det = x_true_det.repeat(1, 3, 1, 1)
-            x_pred_det = x_pred_det.repeat(1, 3, 1, 1)
-        # Compute LPIPS
-        LPIPS_vec[i] = lpips_alex(x_true_det, x_pred_det)
-
-    # If N == 1 -> Return just its value
-    if N == 1:
-        return LPIPS_vec[0]
-    return LPIPS_vec
 
 
 ########################

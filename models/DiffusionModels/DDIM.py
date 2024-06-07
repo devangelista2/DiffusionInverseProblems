@@ -1,5 +1,4 @@
 import os
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,9 +6,10 @@ import torch
 import torch.utils.data as data
 
 from miscellaneous import schedules
-from models.nn.ema import EMAHelper
-from models.nn.models import ConditionedUNet
+from .ema import EMAHelper
+from .models import ConditionedUNet
 
+from tqdm import tqdm
 
 class DDIM(object):
     def __init__(self, config):
@@ -53,18 +53,19 @@ class DDIM(object):
         elif self.config.training.loss.lower() == "mae":
             self.loss_fn = torch.nn.L1Loss()
 
-        # Compute the total number of steps per epoch
-        steps_per_epoch = len(dataset) // self.config.training.batch_size
-
         # Start training
         for epoch in range(self.config.training.n_epochs):
             total_loss = 0
-            step = 0
-            start_time = time.time()
-            print(f"Epoch: {epoch+1}/{self.config.training.n_epochs}:")
+
+            # Initialize tqdm
+            loop = tqdm(train_loader)
+            loop.set_description(f"Epoch: {epoch+1}/{self.config.training.n_epochs} ->")
 
             # Batch steps
-            for i, x_0 in enumerate(train_loader):
+            for i, x_0 in enumerate(loop):   
+                if self.config.data.dataset == "MNIST":
+                    x_0, _ = x_0
+
                 # Put the model in training mode (for BatchNormalization and Dropout layers)
                 self.model.train()
 
@@ -87,11 +88,7 @@ class DDIM(object):
 
                 # Print out result
                 total_loss = total_loss + loss.item()
-                time_elapsed = format_seconds(seconds=time.time() - start_time)
-                print(
-                    f"Iteration: {i+1}/{steps_per_epoch}, Time elapsed: {time_elapsed}, Loss: {total_loss/(i+1):0.4f}.",
-                    end="\r",
-                )
+                loop.set_postfix(loss = total_loss / (i+1))
 
                 # Setp gradient
                 optimizer.zero_grad()
@@ -99,12 +96,14 @@ class DDIM(object):
                 optimizer.step()
 
                 self.ema_helper.update(self.model)
-                data_start = time.time()
 
             # Every 10 epochs, save the model weights
             if (epoch % 10) == 0:
-                weights_path = f"./model_weights/{self.config.data.dataset}_{self.config.training.loss}.pth"
+                weights_path = f"./model_weights/DDIM/{self.config.data.dataset}_{self.config.training.loss}.pth"
                 torch.save(self.model.state_dict(), weights_path)
+
+    def load(self, path):
+        self.model.load_state_dict(torch.load(path))
 
     def reverse_diffusion(self, x_T, diffusion_steps=None, training=False):
         """
@@ -134,21 +133,36 @@ class DDIM(object):
             # Define the time t
             t = torch.ones((batch_size, 1, 1, 1)) - step * delta_t
 
-            # Get alpha(t) and alpha(t-1)
-            alpha_t = self.alpha(t, self.config).to(self.device)
-            alpha_t_pred = self.alpha(t - delta_t, self.config).to(self.device)
-
-            # Predict the noise of xt by UNet
-            e_pred = self.model(x_t, alpha_t)
-
-            # From the noise, predict x0
-            x_pred = (x_t - e_pred * (1 - alpha_t).sqrt()) / alpha_t.sqrt()
-
-            # Compute x_{t-1} by x_0
-            x_t = alpha_t_pred.sqrt() * x_pred + (1 - alpha_t_pred).sqrt() * e_pred
+            # Update x_t
+            x_t = self.reverse_diffusion_step(x_t, t, delta_t)
 
         return x_t
 
+    def reverse_diffusion_step(self, x_t, t, delta_t):
+        # Get alpha(t) and alpha(t-1)
+        alpha_t = self.alpha(t, self.config).to(self.device)
+        alpha_t_pred = self.alpha(t - delta_t, self.config).to(self.device)
+
+        # Predict the noise of xt by UNet
+        e_pred = self.model(x_t, alpha_t)
+
+        # From the noise, predict x0
+        x_pred = (x_t - e_pred * (1 - alpha_t).sqrt()) / alpha_t.sqrt()
+
+        # Compute x_{t-1} by x_0
+        x_t = alpha_t_pred.sqrt() * x_pred + (1 - alpha_t_pred).sqrt() * e_pred
+        return x_t
+
+    def G(self, x_T, diffusion_steps=20):
+        """
+        This function is just a wrapper of the reverse_diffusion function.
+        """
+        x = self.reverse_diffusion(x_T, diffusion_steps, training=False)
+
+        # Normalize x
+        x = (x - x.min()) / (x.max() - x.min())
+        return x
+    
     def test_generation(self, path, n_samples=16, diffusion_steps=20):
         """
         NOTE: n must be a perfect square!
@@ -163,7 +177,7 @@ class DDIM(object):
                 self.config.data.image_size,
             )
         ).to(self.config.device)
-        x_0 = self.reverse_diffusion(x_T, diffusion_steps=diffusion_steps)
+        x_0 = self.G(x_T, diffusion_steps=diffusion_steps)
 
         # Move x_0 to cpu() and normalize
         x_0 = x_0.cpu().detach().numpy()

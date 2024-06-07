@@ -1,44 +1,38 @@
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
 from miscellaneous import configurations, data, utilities
-from variational import operators, solvers
+from variational import solvers
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo256.yml"
+CONFIG_PATH = "./configs/Mayo128.yml"
+GENERATIVE_MODEL = "StyleGANv2" # in {"DDIM", "DCGAN", "StyleGANv2"}
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
 OPERATOR = "GaussianBlur"
-NOISE_LEVEL = 0.00
+NOISE_LEVEL = 0.02
 
-# Select starting point in: "zeros", "random"
-STARTING_POINT = "random"
+# SPECIFY OPERATOR SETTINGS (NOT ALL OF THEM ARE REQUIRED FOR ALL THE EXPERIMENTS)
+settings = {
+    "kernel_size": 3,
+    "kernel_variance": 1,
+    "angular_range": [0, 180],
+    "n_angles": 120,
+}
+
+# Reconstructor settings
+DIFFUSION_STEPS = 10
+LAMBDA = 0
+
+# Regularization parameter
+MAXIT = 800
+ALPHA = 1e-4  # Step-size for the optimizer
+REGULARIZER = "Tik_z"  # in {Tik_z, TV_z, Tik_x, TV_x}
 
 # Load the test image.
 # If int -> select the corresponding test set image. If it is a path, it loads the corresponding image.
 TEST_IMAGE = 10
-
-# SPECIFY OPERATOR SETTINGS (NOT ALL OF THEM ARE REQUIRED FOR ALL THE EXPERIMENTS)
-kernel_size = 3
-kernel_variance = 1
-
-angular_range = [0, 180]
-n_angles = 120
-
-# Reconstructor settings
-DIFFUSION_STEPS = 10
-LAMBDA = 1e-4
-# Regularization parameter
-MAXIT = 800
-ALPHA = 1e-3  # Step-size for the optimizer
-REGULARIZER = "TV_x"  # in {Tik_z, TV_z, Tik_x, TV_x}
-
-# Other parameters
-SAVE_RESULT = True
-
 
 ###################################################################################
 # FROM HERE, DO NOT MODIFY.
@@ -47,21 +41,9 @@ SAVE_RESULT = True
 config = configurations.load_config(CONFIG_PATH)
 BASE_PATH = f"./results/{config.data.dataset}_{config.training.loss}"
 
-# Get knowledge from config
-c, nx, ny = config.data.channels, config.data.image_size, config.data.image_size
-
 # Get operator
-if OPERATOR == "GaussianBlur":
-    K = operators.GaussianBlur(
-        shape=(c, nx, ny), kernel_size=kernel_size, sigma=kernel_variance
-    )
-elif OPERATOR == "Radon":
-    angles = np.linspace(
-        np.deg2rad(angular_range[0]), np.deg2rad(angular_range[1]), n_angles
-    )
-    K = operators.Radon(input_shape=(1, c, nx, ny), angles=angles, geometry="fanflat")
-elif OPERATOR == "Identity":
-    K = operators.Identity(shape=(c, nx, ny))
+settings["shape"] = (config.data.channels, config.data.image_size, config.data.image_size)
+K = utilities.get_operator(OPERATOR, settings)
 
 # Load test image
 if isinstance(TEST_IMAGE, int):
@@ -89,26 +71,31 @@ print(f"Image loaded from {config.data.dataset} dataset. Shape: {x_true.shape}."
 
 # Compute corrupted data
 y = K(x_true)
-torch.manual_seed(42)
-e = torch.randn_like(y)
-y_delta = y + e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * NOISE_LEVEL
+y_delta = y + utilities.gaussian_noise(y, NOISE_LEVEL)
 
 # Get Generator
-G = utilities.ImageGenerator(config, diffusion_steps=DIFFUSION_STEPS)
+weights_path = f"./model_weights/{GENERATIVE_MODEL}/{config.data.dataset}_{config.training.loss}.pth"
+model = utilities.get_model(GENERATIVE_MODEL, config, weights_path=weights_path)
+G = model.G
 
 # Define starting point
-if STARTING_POINT == "zeros":
-    x_T = torch.zeros_like(x_true, requires_grad=True)
-elif STARTING_POINT == "random":
-    torch.manual_seed(42)
-    x_T = torch.randn_like(x_true, requires_grad=True)
+if GENERATIVE_MODEL == "DCGAN":
+    latent_shape = (1, config.DCGAN.latent_dim)
+if GENERATIVE_MODEL == "StyleGANv2":
+    latent_shape = (1, config.StyleGANv2.z_dim)
+elif GENERATIVE_MODEL == "DDIM":
+    latent_shape = x_true.shape
+
+# Define starting point
+torch.manual_seed(42)
+z0 = torch.randn(latent_shape, requires_grad=True, device=config.device)
 
 # Compute solution by GD
 GDSolver = solvers.GD(K, G, REGULARIZER, config, optimizer="adam")
 z_sol, metrics = GDSolver(
     y_delta,
     lmbda=LAMBDA,
-    z0=x_T,
+    z0=z0,
     maxit=MAXIT,
     x_true=x_true,
     alpha=ALPHA,
@@ -116,54 +103,37 @@ z_sol, metrics = GDSolver(
 )
 
 with torch.no_grad():
-    x_sol = (
-        utilities.ImageGenerator(config, diffusion_steps=10)(z_sol)
-        .detach()
-        .cpu()
-        .numpy()
-    )
+    x_sol = G(z_sol).cpu().numpy()
 
-# Saving
+# Saving metrics over iterations
 for metric_name in metrics.keys():
     np.save(
-        f"{BASE_PATH}/{metric_name}_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.npy",
+        f"{BASE_PATH}/{GENERATIVE_MODEL}/{metric_name}_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.npy",
         metrics[metric_name].detach().numpy(),
     )
 
-if SAVE_RESULT:
-    plt.figure(figsize=(25, 9))
-    plt.subplot(1, 3, 1)
-    plt.imshow(x_true.detach().cpu().numpy()[0, 0])
-    plt.gray()
-    plt.title(r"$x_{true}$", fontsize=20)
-    plt.axis("off")
+# Saving reconstruction
+plt.figure(figsize=(25, 9))
+plt.subplot(1, 3, 1)
+plt.imshow(x_true.detach().cpu().numpy()[0, 0])
+plt.gray()
+plt.title(r"$x_{true}$", fontsize=20)
+plt.axis("off")
 
-    plt.subplot(1, 3, 2)
-    plt.imshow(x_true.detach().cpu().numpy()[0, 0])
-    plt.gray()
-    plt.title(r"$y^{\delta}$", fontsize=20)
-    plt.axis("off")
+plt.subplot(1, 3, 2)
+plt.imshow(y_delta.detach().cpu().numpy()[0, 0])
+plt.gray()
+plt.title(r"$y^{\delta}$", fontsize=20)
+plt.axis("off")
 
-    plt.subplot(1, 3, 3)
-    plt.imshow(x_sol[0, 0])
-    plt.gray()
-    plt.axis("off")
-    plt.title(r"$x_{DGP}$", fontsize=20)
+plt.subplot(1, 3, 3)
+plt.imshow(x_sol[0, 0])
+plt.gray()
+plt.axis("off")
+plt.title(r"$x_{DGP}$", fontsize=20)
 
-    plt.tight_layout()
-
-    #     plt.figure()
-    #     plt.imshow(x_sol[0, 0])
-    #     plt.gray()
-    #     plt.axis("off")
-    #    # plt.title(r"$x_{DGP}$", fontsize=20)
-    #     plt.tight_layout()
-    plt.savefig(
-        f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.png"
-    )
-    plt.close()
-    plt.imsave(
-        f"{BASE_PATH}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}_{REGULARIZER}.png",
-        x_sol[0, 0],
-        cmap="gray",
-    )
+plt.tight_layout()
+plt.savefig(
+    f"{BASE_PATH}/{GENERATIVE_MODEL}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.png"
+)
+plt.close()

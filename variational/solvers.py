@@ -1,6 +1,6 @@
 import torch
 
-from miscellaneous import utilities
+import miscellaneous.metrics
 from variational import regularizers
 
 
@@ -24,7 +24,6 @@ class GD:
         tolf=1e-4,
         tolx=1e-5,
         verbose=False,
-        metrics=None,
         return_obj=False,
         return_metrics=False,
     ):
@@ -44,15 +43,15 @@ class GD:
             with torch.no_grad():
                 # PSNR
                 psnr_vec = torch.zeros((maxit + 1,), requires_grad=False)
-                psnr_vec[0] = utilities.psnr(x, x_true)
+                psnr_vec[0] = miscellaneous.metrics.psnr(x, x_true)
 
                 # LPIPS
                 lpips_vec = torch.zeros((maxit + 1,), requires_grad=False)
-                lpips_vec[0] = utilities.LPIPS(x, x_true)
+                lpips_vec[0] = miscellaneous.metrics.LPIPS(x, x_true)
 
                 # SSIM
                 ssim_vec = torch.zeros((maxit + 1,), requires_grad=False)
-                ssim_vec[0] = utilities.ssim(x, x_true)
+                ssim_vec[0] = miscellaneous.metrics.ssim(x, x_true)
 
         k = 0
         stopping = False
@@ -85,9 +84,9 @@ class GD:
             dist = torch.norm(z - z_old) / (torch.norm(z) + 1e-6)
             if x_true is not None:
                 with torch.no_grad():
-                    psnr_vec[k] = utilities.psnr(x_true, x)
-                    lpips_vec[k] = utilities.LPIPS(x_true, x)
-                    ssim_vec[k] = utilities.ssim(x_true, x)
+                    psnr_vec[k] = miscellaneous.metrics.psnr(x_true, x)
+                    lpips_vec[k] = miscellaneous.metrics.LPIPS(x_true, x)
+                    ssim_vec[k] = miscellaneous.metrics.ssim(x_true, x)
                     print(
                         f"k = {k}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f}, SSIM: {ssim_vec[k]:0.4f}."
                     )

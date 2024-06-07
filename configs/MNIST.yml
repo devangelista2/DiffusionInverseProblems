@@ -1,5 +1,5 @@
 data:
-    data_path: MNIST
+    data_path: ../data/MNIST
     dataset: MNIST
     image_size: 28
     channels: 1
@@ -30,3 +30,6 @@ diffusion:
     alpha_min: 0.02
     alpha_max: 1.0
     num_diffusion_timesteps: 1000
+
+GAN:
+    latent_dim: 100
