@@ -61,6 +61,9 @@ class Identity:
 
     def __call__(self, x):
         return x
+    
+    def T(self, y):
+        return y
 
 
 class Radon:
@@ -94,6 +97,14 @@ class Radon:
         self.K = utilities.CustomNumpyOperator()
         y = self.K.apply(self.proj, x[0, 0].cpu().flatten())
         return y.to(x_device)
+
+    def T(self, y):
+        # Save y device
+        y_device = y.device
+
+        self.K = utilities.CustomNumpyOperator()
+        y = self.K.apply(self.proj.T, y.cpu().flatten())
+        return y.reshape(self.input_shape).to(y_device) 
 
     def get_astra_projection_operator(self):
         import astra

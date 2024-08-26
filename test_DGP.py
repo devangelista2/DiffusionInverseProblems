@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -5,30 +7,33 @@ import torch
 from miscellaneous import configurations, data, utilities
 from variational import solvers
 
+# Flag to True to avoid any non-deterministic behavior.
+torch.use_deterministic_algorithms(True)
+
 # SET PARAMETERS
 CONFIG_PATH = "./configs/Mayo128.yml"
-GENERATIVE_MODEL = "StyleGANv2" # in {"DDIM", "DCGAN", "StyleGANv2"}
+GENERATIVE_MODEL = "DDIM" # in {"DDIM", "DCGAN", "StyleGANv2"}
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
-OPERATOR = "GaussianBlur"
-NOISE_LEVEL = 0.02
+OPERATOR = "Radon"
+NOISE_LEVEL = 0.01
 
 # SPECIFY OPERATOR SETTINGS (NOT ALL OF THEM ARE REQUIRED FOR ALL THE EXPERIMENTS)
 settings = {
     "kernel_size": 3,
     "kernel_variance": 1,
     "angular_range": [0, 180],
-    "n_angles": 120,
+    "n_angles": 60,
 }
 
 # Reconstructor settings
 DIFFUSION_STEPS = 10
-LAMBDA = 0
+LAMBDATik = 0
+LAMBDATV = 1
 
 # Regularization parameter
-MAXIT = 800
-ALPHA = 1e-4  # Step-size for the optimizer
-REGULARIZER = "Tik_z"  # in {Tik_z, TV_z, Tik_x, TV_x}
+MAXIT = 1000
+ALPHA = 1e-1  # Step-size for the optimizer
 
 # Load the test image.
 # If int -> select the corresponding test set image. If it is a path, it loads the corresponding image.
@@ -39,7 +44,7 @@ TEST_IMAGE = 10
 
 # Load config file
 config = configurations.load_config(CONFIG_PATH)
-BASE_PATH = f"./results/{config.data.dataset}_{config.training.loss}"
+BASE_PATH = f"./results/{config.data.dataset}_{config.training.loss}_{settings['angular_range'][-1]}_{settings['n_angles']}"
 
 # Get operator
 settings["shape"] = (config.data.channels, config.data.image_size, config.data.image_size)
@@ -91,10 +96,11 @@ torch.manual_seed(42)
 z0 = torch.randn(latent_shape, requires_grad=True, device=config.device)
 
 # Compute solution by GD
-GDSolver = solvers.GD(K, G, REGULARIZER, config, optimizer="adam")
+GDSolver = solvers.Adam(K, G, config)
 z_sol, metrics = GDSolver(
     y_delta,
-    lmbda=LAMBDA,
+    lmbdaTik=LAMBDATik,
+    lmbdaTV=LAMBDATV,
     z0=z0,
     maxit=MAXIT,
     x_true=x_true,
@@ -105,35 +111,17 @@ z_sol, metrics = GDSolver(
 with torch.no_grad():
     x_sol = G(z_sol).cpu().numpy()
 
+# Create saving path if required
+os.makedirs(f"{BASE_PATH}/{GENERATIVE_MODEL}", exist_ok=True)
+
 # Saving metrics over iterations
 for metric_name in metrics.keys():
+    fname = f"{metric_name}_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.npy"
     np.save(
-        f"{BASE_PATH}/{GENERATIVE_MODEL}/{metric_name}_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.npy",
+        f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname}",
         metrics[metric_name].detach().numpy(),
     )
 
 # Saving reconstruction
-plt.figure(figsize=(25, 9))
-plt.subplot(1, 3, 1)
-plt.imshow(x_true.detach().cpu().numpy()[0, 0])
-plt.gray()
-plt.title(r"$x_{true}$", fontsize=20)
-plt.axis("off")
-
-plt.subplot(1, 3, 2)
-plt.imshow(y_delta.detach().cpu().numpy()[0, 0])
-plt.gray()
-plt.title(r"$y^{\delta}$", fontsize=20)
-plt.axis("off")
-
-plt.subplot(1, 3, 3)
-plt.imshow(x_sol[0, 0])
-plt.gray()
-plt.axis("off")
-plt.title(r"$x_{DGP}$", fontsize=20)
-
-plt.tight_layout()
-plt.savefig(
-    f"{BASE_PATH}/{GENERATIVE_MODEL}/recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbda_{LAMBDA}_alpha_{ALPHA}.png"
-)
-plt.close()
+fname = f"recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
+plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname}", x_sol[0, 0], cmap='gray')

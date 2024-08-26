@@ -129,7 +129,7 @@ class DDIM(object):
         batch_size = x_T.size(0)
 
         x_t = x_T.to(self.device)
-        for step in range(diffusion_steps):
+        for step in range(diffusion_steps + 1):
             # Define the time t
             t = torch.ones((batch_size, 1, 1, 1)) - step * delta_t
 
@@ -160,7 +160,7 @@ class DDIM(object):
         x = self.reverse_diffusion(x_T, diffusion_steps, training=False)
 
         # Normalize x
-        x = (x - x.min()) / (x.max() - x.min())
+        # x = (x - x.min()) / (x.max() - x.min())
         return x
     
     def test_generation(self, path, n_samples=16, diffusion_steps=20):
