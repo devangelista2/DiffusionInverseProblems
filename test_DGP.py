@@ -12,7 +12,7 @@ torch.use_deterministic_algorithms(True)
 
 # SET PARAMETERS
 CONFIG_PATH = "./configs/Mayo128.yml"
-GENERATIVE_MODEL = "DDIM" # in {"DDIM", "DCGAN", "StyleGANv2"}
+GENERATIVE_MODEL = "DDIM"  # in {"DDIM", "DCGAN", "StyleGANv2"}
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
 OPERATOR = "Radon"
@@ -47,7 +47,11 @@ config = configurations.load_config(CONFIG_PATH)
 BASE_PATH = f"./results/{config.data.dataset}_{config.training.loss}_{settings['angular_range'][-1]}_{settings['n_angles']}"
 
 # Get operator
-settings["shape"] = (config.data.channels, config.data.image_size, config.data.image_size)
+settings["shape"] = (
+    config.data.channels,
+    config.data.image_size,
+    config.data.image_size,
+)
 K = utilities.get_operator(OPERATOR, settings)
 
 # Load test image
@@ -122,6 +126,9 @@ for metric_name in metrics.keys():
         metrics[metric_name].detach().numpy(),
     )
 
-# Saving reconstruction
-fname = f"recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
-plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname}", x_sol[0, 0], cmap='gray')
+# Saving reconstruction and ground truth
+fname_true = f"true_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
+plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_true}", x_true[0, 0], cmap="gray")
+
+fname_rec = f"recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
+plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_rec}", x_sol[0, 0], cmap="gray")

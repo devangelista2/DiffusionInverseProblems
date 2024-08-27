@@ -93,14 +93,13 @@ class Adam:
 
             # Check convergence
             stopping = (k >= maxit - 1) or (dist < tolx) or (obj[k] < tolf)
-        if return_obj:
-            return z, obj[:k]
         if return_metrics:
             metrics = {
                 "PSNR": psnr_vec[:k],
                 "LPIPS": lpips_vec[:k],
                 "SSIM": ssim_vec[:k],
                 "GNorm": gnorm_vec[:k],
+                "fval": obj[:k],
             }
             return z, metrics
         return z
@@ -109,12 +108,12 @@ class Adam:
         # Compute the residual
         res = torch.sum(torch.square(self.K(x) - y_delta))
         regTik = regularizers.Tik(z)
-        regTV = regularizers.TV(x)
+        regTV = regularizers.TV_beta(x)
 
         f_k = res + lmbdaTik * regTik + lmbdaTV * regTV
 
         return f_k
-    
+
 
 class GradientDescent:
     def __init__(self, K, model, config):
@@ -140,7 +139,9 @@ class GradientDescent:
         # Define starting point
         z0 = z0.requires_grad_(False)
         z: torch.Tensor = z0.clone()
-        res, x, grad = self.compute_res(z, y_delta, diffusion_steps=10, return_grad=True)
+        res, x, grad = self.compute_res(
+            z, y_delta, diffusion_steps=10, return_grad=True
+        )
 
         # Normalize gradient
         gnorm = torch.norm(grad)
@@ -179,11 +180,12 @@ class GradientDescent:
             z = z_old - alpha * grad
 
             # Update x
-            res, x, grad = self.compute_res(z, y_delta, diffusion_steps=10, return_grad=True)
+            res, x, grad = self.compute_res(
+                z, y_delta, diffusion_steps=10, return_grad=True
+            )
 
             # Normalize gradient
             gnorm = torch.norm(grad)
-            # grad = grad / gnorm
 
             # Update k
             k = k + 1
@@ -206,25 +208,27 @@ class GradientDescent:
 
             # Check convergence
             stopping = (k >= maxit - 1) or (dist < tolx) or (obj[k] < tolf)
-        if return_obj:
-            return z, obj[:k]
         if return_metrics:
             metrics = {
                 "PSNR": psnr_vec[:k],
                 "LPIPS": lpips_vec[:k],
                 "SSIM": ssim_vec[:k],
+                "GNorm": gnorm_vec[:k],
+                "fval": obj[:k],
             }
             return z, metrics
         return z
-    
-    def compute_res(self,
-                    z: torch.Tensor, 
-                    y_delta: torch.Tensor, 
-                    diffusion_steps: int, 
-                    return_grad: bool = False):
+
+    def compute_res(
+        self,
+        z: torch.Tensor,
+        y_delta: torch.Tensor,
+        diffusion_steps: int,
+        return_grad: bool = False,
+    ):
         # Initialization
         x_t = z.clone()
-        delta_t = 1 / diffusion_steps 
+        delta_t = 1 / diffusion_steps
 
         with torch.no_grad():
             # Forward pass: Compute x_0 through the reverse diffusion, saving intermediate steps.
@@ -251,9 +255,11 @@ class GradientDescent:
                     t = torch.ones((1, 1, 1, 1)) - step * delta_t
 
                     v = grad
-                    _, grad = torch.autograd.functional.jvp(lambda x: self.model.reverse_diffusion_step(x, t, delta_t), 
-                                                            (xs[step],),
-                                                            (v,))
+                    _, grad = torch.autograd.functional.jvp(
+                        lambda x: self.model.reverse_diffusion_step(x, t, delta_t),
+                        (xs[step],),
+                        (v,),
+                    )
 
                 return res, x, grad
             return res
