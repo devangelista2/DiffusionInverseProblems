@@ -23,17 +23,17 @@ settings = {
     "kernel_size": 3,
     "kernel_variance": 1,
     "angular_range": [0, 180],
-    "n_angles": 60,
+    "n_angles": 18,
 }
 
 # Reconstructor settings
 DIFFUSION_STEPS = 10
-LAMBDATik = 0
-LAMBDATV = 1
+LAMBDATik = 10
+LAMBDATV = 10
 
 # Regularization parameter
-MAXIT = 1000
-ALPHA = 1e-1  # Step-size for the optimizer
+MAXIT = 400
+ALPHA = 1e-2  # Step-size for the optimizer
 
 # Load the test image.
 # If int -> select the corresponding test set image. If it is a path, it loads the corresponding image.
@@ -128,7 +128,7 @@ for metric_name in metrics.keys():
 
 # Saving reconstruction and ground truth
 fname_true = f"true_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
-plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_true}", x_true[0, 0], cmap="gray")
+plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_true}", utilities.project(x_true.detach().cpu()[0, 0]), cmap="gray")
 
 fname_rec = f"recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
-plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_rec}", x_sol[0, 0], cmap="gray")
+plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_rec}", utilities.project(x_sol[0, 0]), cmap="gray")

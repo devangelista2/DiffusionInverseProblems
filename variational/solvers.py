@@ -1,7 +1,8 @@
 import torch
-
+import time
 import miscellaneous.metrics
 from variational import regularizers
+from miscellaneous import utilities
 
 
 class Adam:
@@ -22,8 +23,9 @@ class Adam:
         tolf=1e-4,
         tolx=1e-5,
         verbose=False,
-        return_obj=False,
         return_metrics=False,
+        *args,
+        **kwargs,
     ):
         # Define starting point
         z = z0
@@ -55,6 +57,7 @@ class Adam:
                 gnorm_vec[0] = 0.0
 
         k = 0
+        start_time = time.time()
         stopping = False
         while not stopping:
             # Update z_old
@@ -88,7 +91,9 @@ class Adam:
                     ssim_vec[k] = miscellaneous.metrics.ssim(x_true, x)
                     gnorm_vec[k] = gnorm
                     print(
-                        f"k = {k}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f}, SSIM: {ssim_vec[k]:0.4f}, gnorm: {gnorm:0.4f}."
+                        f"({utilities.format_time(start_time)}) "
+                        +f"It. {k}/{maxit}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f},"
+                        +f" SSIM: {ssim_vec[k]:0.4f}, gnorm: {gnorm:0.4f}, obj: {obj_k:0.4f}."
                     )
 
             # Check convergence
@@ -133,8 +138,9 @@ class GradientDescent:
         tolf: float = 1e-4,
         tolx: float = 1e-5,
         verbose: bool = False,
-        return_obj: bool = False,
         return_metrics: bool = False,
+        *args,
+        **kwargs,
     ):
         # Define starting point
         z0 = z0.requires_grad_(False)
@@ -203,7 +209,8 @@ class GradientDescent:
                     ssim_vec[k] = miscellaneous.metrics.ssim(x_true, x)
                     gnorm_vec[k] = gnorm
                     print(
-                        f"k = {k}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f}, SSIM: {ssim_vec[k]:0.4f}, gnorm: {gnorm_vec[k]:0.4f}."
+                        f"k = {k}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f},"
+                        +f" SSIM: {ssim_vec[k]:0.4f}, gnorm: {gnorm:0.4f}, obj: {obj_k:0.4f}."
                     )
 
             # Check convergence

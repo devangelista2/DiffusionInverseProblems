@@ -6,6 +6,7 @@ from variational import operators
 from models.DiffusionModels.DDIM import DDIM
 from models.GAN.DCGAN import DCGAN
 from models.GAN.StyleGANv2 import StyleGANv2
+import time
 
 ########################
 # MODEL UTILITIES
@@ -104,3 +105,29 @@ def gradient(x):
     D_h = torch.diff(x, n=1, dim=3, prepend=torch.zeros_like(x)[:, :, :, :1])
     D_v = torch.diff(x, n=1, dim=2, prepend=torch.zeros_like(x)[:, :, :1, :])
     return D_h, D_v
+
+
+########################
+# COMMON UTILITIES
+########################
+def format_time(start_time):
+    # End the timer
+    end_time = time.time()
+
+    # Calculate the time difference
+    elapsed_time = end_time - start_time
+
+    # Convert elapsed time to hours, minutes, and seconds
+    hours, rem = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(rem, 60)
+
+    # Format using an f-string with %H:%M:%S style
+    formatted_time = f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+    return formatted_time
+
+def normalize(x):
+    return (x - x.min()) / (x.max() - x.min())
+
+def project(x):
+    x[x<0] = 0
+    return x
