@@ -180,7 +180,6 @@ class GradientDescent:
         while not stopping:
             # Update z_old
             z_old = z.clone()
-            print(torch.norm(z_old))
 
             # Update z
             z = z_old - alpha * grad

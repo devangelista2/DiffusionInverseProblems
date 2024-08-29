@@ -22,17 +22,17 @@ NOISE_LEVEL = 0.01
 settings = {
     "kernel_size": 3,
     "kernel_variance": 1,
-    "angular_range": [0, 180],
-    "n_angles": 18,
+    "angular_range": [0, 90],
+    "n_angles": 15,
 }
 
 # Reconstructor settings
 DIFFUSION_STEPS = 10
-LAMBDATik = 10
+LAMBDATik = 100
 LAMBDATV = 10
 
 # Regularization parameter
-MAXIT = 400
+MAXIT = 500
 ALPHA = 1e-2  # Step-size for the optimizer
 
 # Load the test image.
