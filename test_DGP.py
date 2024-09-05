@@ -8,7 +8,7 @@ from miscellaneous import configurations, data, utilities
 from variational import solvers
 
 # Flag to True to avoid any non-deterministic behavior.
-torch.use_deterministic_algorithms(True)
+# torch.use_deterministic_algorithms(True)
 
 # SET PARAMETERS
 CONFIG_PATH = "./configs/Mayo128.yml"
@@ -16,20 +16,20 @@ GENERATIVE_MODEL = "DDIM"  # in {"DDIM", "DCGAN", "StyleGANv2"}
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
 OPERATOR = "Radon"
-NOISE_LEVEL = 0.01
+NOISE_LEVEL = 0
 
 # SPECIFY OPERATOR SETTINGS (NOT ALL OF THEM ARE REQUIRED FOR ALL THE EXPERIMENTS)
 settings = {
     "kernel_size": 3,
     "kernel_variance": 1,
-    "angular_range": [0, 90],
-    "n_angles": 15,
+    "angular_range": [0, 180],
+    "n_angles": 60,
 }
 
 # Reconstructor settings
-DIFFUSION_STEPS = 10
-LAMBDATik = 100
-LAMBDATV = 10
+DIFFUSION_STEPS = 20
+LAMBDATik = 0
+LAMBDATV = 0
 
 # Regularization parameter
 MAXIT = 500
@@ -57,7 +57,7 @@ K = utilities.get_operator(OPERATOR, settings)
 # Load test image
 if isinstance(TEST_IMAGE, int):
     # Load the data
-    _, x_test = data.load_data(config)
+    x_test, _ = data.load_data(config)
 
     # If the data is MNIST, then x_test is a list of tuples.
     # The data element is the 0-th element of the TEST_IMAGE-th
@@ -79,6 +79,7 @@ x_true = x_true.to(config.device)  # Send x_true to device
 print(f"Image loaded from {config.data.dataset} dataset. Shape: {x_true.shape}.")
 
 # Compute corrupted data
+torch.manual_seed(42)
 y = K(x_true)
 y_delta = y + utilities.gaussian_noise(y, NOISE_LEVEL)
 
@@ -96,7 +97,6 @@ elif GENERATIVE_MODEL == "DDIM":
     latent_shape = x_true.shape
 
 # Define starting point
-torch.manual_seed(42)
 z0 = torch.randn(latent_shape, requires_grad=True, device=config.device)
 
 # Compute solution by GD
@@ -109,11 +109,12 @@ z_sol, metrics = GDSolver(
     maxit=MAXIT,
     x_true=x_true,
     alpha=ALPHA,
+    diffusion_steps=DIFFUSION_STEPS,
     return_metrics=True,
 )
 
 with torch.no_grad():
-    x_sol = G(z_sol).cpu().numpy()
+    x_sol = G(z_sol, diffusion_steps=DIFFUSION_STEPS).cpu().numpy()
 
 # Create saving path if required
 os.makedirs(f"{BASE_PATH}/{GENERATIVE_MODEL}", exist_ok=True)
@@ -126,9 +127,6 @@ for metric_name in metrics.keys():
         metrics[metric_name].detach().numpy(),
     )
 
-# Saving reconstruction and ground truth
-fname_true = f"true_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
-plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_true}", utilities.project(x_true.detach().cpu()[0, 0]), cmap="gray")
-
+# Saving reconstruction
 fname_rec = f"recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
 plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_rec}", utilities.project(x_sol[0, 0]), cmap="gray")

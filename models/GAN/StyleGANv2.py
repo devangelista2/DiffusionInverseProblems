@@ -1,14 +1,16 @@
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data as data
-from miscellaneous.losses import r1_reg, path_length_regularization
 from tqdm import tqdm
 
-import numpy as np
-import matplotlib.pyplot as plt
-import os
+from miscellaneous.losses import path_length_regularization, r1_reg
 
 from ._blocks import *
+
 
 ###########################################
 # GENERATOR
@@ -241,7 +243,7 @@ class StyleGANv2(object):
             )
             plt.close()
 
-    def G(self, z):
+    def G(self, z, *args, **kwargs):
         x = self.generator(z)
 
         # Normalize x

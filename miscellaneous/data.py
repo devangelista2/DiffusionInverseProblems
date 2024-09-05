@@ -32,16 +32,21 @@ class ImageDataset(Dataset):
 
 
 class MayoDataset(Dataset):
-    def __init__(self, data_path, transform=None) -> None:
+    def __init__(self, data_path, mode="train", transform=None) -> None:
         super().__init__()
 
         # Get transforms
         self.transform = transform
+        self.mode = mode
 
         # Set the data_path
         self.data_path = data_path
-        self.train_path = os.path.join(data_path, "train")
-        self.test_path = os.path.join(data_path, "test")
+        if mode == "train":
+            self.path = os.path.join(data_path, "train")
+        elif mode == "test":   
+            self.path = os.path.join(data_path, "test")
+        else:
+            raise NotImplementedError
 
         # Get the filename list
         self.f_list = self.get_f_list()
@@ -61,7 +66,7 @@ class MayoDataset(Dataset):
         return len(self.f_list)
 
     def get_f_list(self):
-        folders = glob.glob(os.path.join(self.train_path, "*"))
+        folders = glob.glob(os.path.join(self.path, "*"))
 
         f_list = []
         for folder in folders:
@@ -197,9 +202,10 @@ def load_data(config):
         )
 
         # Get dataset
-        x_train = MayoDataset(config.data.data_path, transform=transform)
+        x_train = MayoDataset(config.data.data_path, transform=transform, mode="train")
+        x_test = MayoDataset(config.data.data_path, transform=transform, mode="test")
 
-        return x_train, x_train
+        return x_train, x_test
 
     elif config.data.dataset == "Mayo256":
         # Define the transform

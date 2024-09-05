@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.utils.data as data
+from tqdm import tqdm
 
 from miscellaneous import schedules
+
 from .ema import EMAHelper
 from .models import ConditionedUNet
 
-from tqdm import tqdm
 
 class DDIM(object):
     def __init__(self, config):
@@ -158,9 +159,6 @@ class DDIM(object):
         This function is just a wrapper of the reverse_diffusion function.
         """
         x = self.reverse_diffusion(x_T, diffusion_steps, training=False)
-
-        # Normalize x
-        # x = (x - x.min()) / (x.max() - x.min())
         return x
     
     def test_generation(self, path, n_samples=16, diffusion_steps=20):

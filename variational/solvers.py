@@ -1,8 +1,10 @@
-import torch
 import time
+
+import torch
+
 import miscellaneous.metrics
-from variational import regularizers
 from miscellaneous import utilities
+from variational import regularizers
 
 
 class Adam:
@@ -19,6 +21,7 @@ class Adam:
         z0,
         x_true=None,
         alpha=1,
+        diffusion_steps=10,
         maxit=200,
         tolf=1e-4,
         tolx=1e-5,
@@ -29,7 +32,7 @@ class Adam:
     ):
         # Define starting point
         z = z0
-        x = self.G(z)
+        x = self.G(z, diffusion_steps)
 
         # Define optimizer
         optimizer = torch.optim.Adam([z], lr=alpha)
@@ -44,9 +47,9 @@ class Adam:
                 psnr_vec = torch.zeros((maxit + 1,), requires_grad=False)
                 psnr_vec[0] = miscellaneous.metrics.psnr(x, x_true)
 
-                # LPIPS
-                lpips_vec = torch.zeros((maxit + 1,), requires_grad=False)
-                lpips_vec[0] = miscellaneous.metrics.LPIPS(x, x_true)
+                # Residue
+                res_vec = torch.zeros((maxit+1,), requires_grad=False)
+                res_vec[0] = torch.sum(torch.square(self.K(x_true)))
 
                 # SSIM
                 ssim_vec = torch.zeros((maxit + 1,), requires_grad=False)
@@ -74,7 +77,7 @@ class Adam:
             optimizer.zero_grad()
 
             # Compute x from z
-            x = self.G(z)
+            x = self.G(z, diffusion_steps)
 
             # Update k
             k = k + 1
@@ -87,12 +90,12 @@ class Adam:
             if x_true is not None:
                 with torch.no_grad():
                     psnr_vec[k] = miscellaneous.metrics.psnr(x_true, x)
-                    lpips_vec[k] = miscellaneous.metrics.LPIPS(x_true, x)
+                    res_vec[k] = torch.sum(torch.square(self.K(x) - self.K(x_true)))
                     ssim_vec[k] = miscellaneous.metrics.ssim(x_true, x)
                     gnorm_vec[k] = gnorm
                     print(
                         f"({utilities.format_time(start_time)}) "
-                        +f"It. {k}/{maxit}. PSNR: {psnr_vec[k]:0.4f}, LPIPS: {lpips_vec[k]:0.4f},"
+                        +f"It. {k}/{maxit}. PSNR: {psnr_vec[k]:0.4f}, Res: {res_vec[k]:0.4f},"
                         +f" SSIM: {ssim_vec[k]:0.4f}, gnorm: {gnorm:0.4f}, obj: {obj_k:0.4f}."
                     )
 
@@ -101,7 +104,7 @@ class Adam:
         if return_metrics:
             metrics = {
                 "PSNR": psnr_vec[:k],
-                "LPIPS": lpips_vec[:k],
+                "Res": res_vec[:k],
                 "SSIM": ssim_vec[:k],
                 "GNorm": gnorm_vec[:k],
                 "fval": obj[:k],

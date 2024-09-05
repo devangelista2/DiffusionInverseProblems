@@ -1,12 +1,13 @@
-import torch
-import numpy as np
+import time
 
-from variational import operators
+import numpy as np
+import torch
 
 from models.DiffusionModels.DDIM import DDIM
 from models.GAN.DCGAN import DCGAN
 from models.GAN.StyleGANv2 import StyleGANv2
-import time
+from variational import operators
+
 
 ########################
 # MODEL UTILITIES
@@ -51,8 +52,7 @@ def get_operator(operator_name, operator_setup):
     
     return K
 
-def gaussian_noise(y, noise_level, seed=42):
-    torch.manual_seed(seed)
+def gaussian_noise(y, noise_level):
     e = torch.randn_like(y)
     return e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * noise_level
 
