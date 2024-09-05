@@ -17,7 +17,7 @@ if TRAIN:
     model = utilities.get_model(GENERATIVE_MODEL, config)
     model.train(x_train)
 else:
-    weights_path = f"./model_weights/{GENERATIVE_MODEL}/{config.data.dataset}_{config.training.loss}.pth"
+    weights_path = f"./model_weights/{GENERATIVE_MODEL}/{config.data.dataset}_{config.training.loss}_new.pth"
     model = utilities.get_model(GENERATIVE_MODEL, config, weights_path=weights_path)
 
 # Test the model if required

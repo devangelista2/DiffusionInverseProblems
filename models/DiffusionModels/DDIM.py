@@ -10,6 +10,7 @@ from miscellaneous import schedules
 
 from .ema import EMAHelper
 from .models import ConditionedUNet
+from .models_adv import DhariwalUNet
 
 
 class DDIM(object):
@@ -21,13 +22,17 @@ class DDIM(object):
         self.alpha = schedules.improved_cosine
 
         # Define the model
-        self.model = ConditionedUNet(
-            config.model.in_ch,
-            config.model.n_ch,
-            config.model.n_conv_per_level,
-            config.model.L,
+        self.model = DhariwalUNet(
+            img_resolution=config.data.image_size,
+            in_channels=config.model.in_ch,
         ).to(self.device)
-        self.model = torch.nn.DataParallel(self.model)
+        # self.model = ConditionedUNet(
+        #     config.model.in_ch,
+        #     config.model.n_ch,
+        #     config.model.n_conv_per_level,
+        #     config.model.L,
+        # ).to(self.device)
+        # self.model = torch.nn.DataParallel(self.model)
 
         # Define EMA Model
         self.ema_helper = EMAHelper(mu=self.config.model.ema_rate)
@@ -63,7 +68,7 @@ class DDIM(object):
             loop.set_description(f"Epoch: {epoch+1}/{self.config.training.n_epochs} ->")
 
             # Batch steps
-            for i, x_0 in enumerate(loop):   
+            for i, x_0 in enumerate(loop):
                 if self.config.data.dataset == "MNIST":
                     x_0, _ = x_0
 
@@ -89,7 +94,7 @@ class DDIM(object):
 
                 # Print out result
                 total_loss = total_loss + loss.item()
-                loop.set_postfix(loss = total_loss / (i+1))
+                loop.set_postfix(loss=total_loss / (i + 1))
 
                 # Setp gradient
                 optimizer.zero_grad()
@@ -160,7 +165,7 @@ class DDIM(object):
         """
         x = self.reverse_diffusion(x_T, diffusion_steps, training=False)
         return x
-    
+
     def test_generation(self, path, n_samples=16, diffusion_steps=20):
         """
         NOTE: n must be a perfect square!
