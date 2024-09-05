@@ -6,6 +6,7 @@ import torch
 from models.DiffusionModels.DDIM import DDIM
 from models.GAN.DCGAN import DCGAN
 from models.GAN.StyleGANv2 import StyleGANv2
+from models.ImprovedDDIM.ImprovedDDIM import ImprovedDDIM
 from variational import operators
 
 
@@ -16,6 +17,8 @@ def get_model(model_name, config, weights_path=None):
     # Define generative model
     if model_name == "DDIM":
         model = DDIM(config)
+    elif model_name == "ImprovedDDIM":
+        model = ImprovedDDIM(config)
     elif model_name == "DCGAN":
         model = DCGAN(config)
     elif model_name == "StyleGANv2":

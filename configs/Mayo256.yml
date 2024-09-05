@@ -5,7 +5,7 @@ data:
     channels: 1
 
 training:
-    batch_size: 1
+    batch_size: 2
     n_epochs: 800
     loss: 'mse'
 

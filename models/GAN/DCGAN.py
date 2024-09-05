@@ -1,12 +1,10 @@
-import numpy as np
-
-import torch.utils.data as data
 import os
+
 import matplotlib.pyplot as plt
-
-import torch.nn as nn
+import numpy as np
 import torch
-
+import torch.nn as nn
+import torch.utils.data as data
 from tqdm import tqdm
 
 
@@ -90,7 +88,7 @@ class DCGAN(object):
 
         self.image_size = config.data.image_size
         self.channels = config.data.channels
-        self.latent_dim = config.GAN.latent_dim
+        self.latent_dim = config.DCGAN.latent_dim
 
         # Initialize generator and discriminator
         self.generator = Generator(self.latent_dim, self.image_size, self.channels).to(self.device)

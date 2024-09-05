@@ -1,8 +1,8 @@
 from miscellaneous import configurations, data, utilities
 
 # SET PARAMETERS
-CONFIG_PATH = "./configs/Mayo128.yml"
-GENERATIVE_MODEL = "StyleGANv2"
+CONFIG_PATH = "./configs/Mayo256.yml"
+GENERATIVE_MODEL = "ImprovedDDIM"
 TRAIN = True
 
 # Load config file
