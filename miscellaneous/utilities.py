@@ -6,6 +6,7 @@ import torch
 from models.DiffusionModels.DDIM import DDIM
 from models.GAN.DCGAN import DCGAN
 from models.GAN.StyleGANv2 import StyleGANv2
+from models.GAN.WGAN import WGAN
 from models.ImprovedDDIM.ImprovedDDIM import ImprovedDDIM
 from variational import operators
 
@@ -21,11 +22,13 @@ def get_model(model_name, config, weights_path=None):
         model = ImprovedDDIM(config)
     elif model_name == "DCGAN":
         model = DCGAN(config)
+    elif model_name == "WGAN":
+        model = WGAN(config)
     elif model_name == "StyleGANv2":
         model = StyleGANv2(config)
     else:
         raise NotImplementedError
-    
+
     if weights_path is not None:
         # Load trained model
         model.load(weights_path)
@@ -49,15 +52,19 @@ def get_operator(operator_name, operator_setup):
         angles = np.linspace(
             np.deg2rad(angular_range[0]), np.deg2rad(angular_range[1]), n_angles
         )
-        K = operators.Radon(input_shape=(1,) + operator_shape, angles=angles, geometry="fanflat")
+        K = operators.Radon(
+            input_shape=(1,) + operator_shape, angles=angles, geometry="fanflat"
+        )
     elif operator_name == "Identity":
         K = operators.Identity(shape=operator_shape)
-    
+
     return K
+
 
 def gaussian_noise(y, noise_level):
     e = torch.randn_like(y)
     return e / torch.norm(e, p="fro") * torch.norm(y, p="fro") * noise_level
+
 
 ########################
 # PYTORCH UTILITIES
@@ -128,9 +135,11 @@ def format_time(start_time):
     formatted_time = f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
     return formatted_time
 
+
 def normalize(x):
     return (x - x.min()) / (x.max() - x.min())
 
+
 def project(x):
-    x[x<0] = 0
+    x[x < 0] = 0
     return x

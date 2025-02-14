@@ -12,7 +12,7 @@ from variational import solvers
 
 # SET PARAMETERS
 CONFIG_PATH = "./configs/Mayo128.yml"
-GENERATIVE_MODEL = "DDIM"  # in {"DDIM", "DCGAN", "StyleGANv2"}
+GENERATIVE_MODEL = "WGAN"  # in {"DDIM", "DCGAN", "StyleGANv2", "WGAN"}
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
 OPERATOR = "Radon"
@@ -22,14 +22,14 @@ NOISE_LEVEL = 0.01
 settings = {
     "kernel_size": 3,
     "kernel_variance": 1,
-    "angular_range": [0, 90],
-    "n_angles": 15,
+    "angular_range": [0, 180],
+    "n_angles": 30,
 }
 
 # Reconstructor settings
 DIFFUSION_STEPS = 20
-LAMBDATik = 0
-LAMBDATV = 0
+LAMBDATik = 1e-2
+LAMBDATV = 10
 
 # Regularization parameter
 MAXIT = 500
@@ -91,8 +91,10 @@ G = model.G
 # Define starting point
 if GENERATIVE_MODEL == "DCGAN":
     latent_shape = (1, config.DCGAN.latent_dim)
-if GENERATIVE_MODEL == "StyleGANv2":
+elif GENERATIVE_MODEL == "StyleGANv2":
     latent_shape = (1, config.StyleGANv2.z_dim)
+elif GENERATIVE_MODEL == "WGAN":
+    latent_shape = (1, config.WGAN.z_dim, 1, 1)
 elif GENERATIVE_MODEL == "DDIM":
     latent_shape = x_true.shape
 

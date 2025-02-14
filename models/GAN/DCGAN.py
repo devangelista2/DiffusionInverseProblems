@@ -26,7 +26,7 @@ class Generator(nn.Module):
         self.latent_dim = latent_dim
 
         self.init_size = image_size // 4
-        self.l1 = nn.Sequential(nn.Linear(latent_dim, 128 * self.init_size ** 2))
+        self.l1 = nn.Sequential(nn.Linear(latent_dim, 128 * self.init_size**2))
 
         self.conv_blocks = nn.Sequential(
             nn.BatchNorm2d(128),
@@ -65,11 +65,15 @@ class Discriminator(nn.Module):
         )
 
         # The height and width of downsampled image
-        ds_size = image_size // 2 ** 4
-        self.adv_layer = nn.Sequential(nn.Linear(128 * ds_size ** 2, 1), nn.Sigmoid())
+        ds_size = image_size // 2**4
+        self.adv_layer = nn.Sequential(nn.Linear(128 * ds_size**2, 1), nn.Sigmoid())
 
     def discriminator_block(self, in_filters, out_filters, bn=True):
-        block = [nn.Conv2d(in_filters, out_filters, 3, 2, 1), nn.LeakyReLU(0.2, inplace=True), nn.Dropout2d(0.25)]
+        block = [
+            nn.Conv2d(in_filters, out_filters, 3, 2, 1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout2d(0.25),
+        ]
         if bn:
             block.append(nn.BatchNorm2d(out_filters, 0.8))
         return block
@@ -81,6 +85,7 @@ class Discriminator(nn.Module):
 
         return validity
 
+
 class DCGAN(object):
     def __init__(self, config):
         self.config = config
@@ -91,8 +96,12 @@ class DCGAN(object):
         self.latent_dim = config.DCGAN.latent_dim
 
         # Initialize generator and discriminator
-        self.generator = Generator(self.latent_dim, self.image_size, self.channels).to(self.device)
-        self.discriminator = Discriminator(self.latent_dim, self.image_size, self.channels).to(self.device)
+        self.generator = Generator(self.latent_dim, self.image_size, self.channels).to(
+            self.device
+        )
+        self.discriminator = Discriminator(
+            self.latent_dim, self.image_size, self.channels
+        ).to(self.device)
 
         # Initialize weights
         self.generator.apply(weights_init_normal)
@@ -105,13 +114,17 @@ class DCGAN(object):
         )
 
         # Define the optimizer(s)
-        optimizer_G = torch.optim.Adam(self.generator.parameters(),
-                                       lr=self.config.optimizer.lr,
-                                       betas=(self.config.optimizer.beta1, 0.999))
-        optimizer_D = torch.optim.Adam(self.discriminator.parameters(),
-                                       lr=self.config.optimizer.lr,
-                                       betas=(self.config.optimizer.beta1, 0.999))
-                                       
+        optimizer_G = torch.optim.Adam(
+            self.generator.parameters(),
+            lr=self.config.optimizer.lr,
+            betas=(self.config.optimizer.beta1, 0.999),
+        )
+        optimizer_D = torch.optim.Adam(
+            self.discriminator.parameters(),
+            lr=self.config.optimizer.lr,
+            betas=(self.config.optimizer.beta1, 0.999),
+        )
+
         # Define the loss function
         adversarial_loss = torch.nn.BCELoss()
 
@@ -130,8 +143,18 @@ class DCGAN(object):
                     x, _ = x
 
                 # Adversarial ground truths
-                true = torch.Tensor(x.shape[0], 1).fill_(1.0).requires_grad_(False).to(self.device)
-                fake = torch.Tensor(x.shape[0], 1).fill_(0.0).requires_grad_(False).to(self.device)
+                true = (
+                    torch.Tensor(x.shape[0], 1)
+                    .fill_(1.0)
+                    .requires_grad_(False)
+                    .to(self.device)
+                )
+                fake = (
+                    torch.Tensor(x.shape[0], 1)
+                    .fill_(0.0)
+                    .requires_grad_(False)
+                    .to(self.device)
+                )
 
                 # Configure input
                 x_true = x.to(self.device)
@@ -163,13 +186,20 @@ class DCGAN(object):
 
                 # Measure discriminator's ability to classify real from generated samples
                 real_loss = adversarial_loss(self.discriminator(x_true), true)
-                fake_loss = adversarial_loss(self.discriminator(gen_imgs.detach()), fake)
+                fake_loss = adversarial_loss(
+                    self.discriminator(gen_imgs.detach()), fake
+                )
                 d_loss = (real_loss + fake_loss) / 2
 
                 # Print out result
                 total_disc_loss = total_disc_loss + d_loss.item()
 
-                loop.set_postfix(loss = (round(total_gen_loss / (i+1), 4), round(total_disc_loss / (i+1), 4)))
+                loop.set_postfix(
+                    loss=(
+                        round(total_gen_loss / (i + 1), 4),
+                        round(total_disc_loss / (i + 1), 4),
+                    )
+                )
 
                 d_loss.backward()
                 optimizer_D.step()
@@ -183,40 +213,40 @@ class DCGAN(object):
         self.generator.load_state_dict(torch.load(path))
 
     def test_generation(self, path, n_samples=16, diffusion_steps=20):
-            """
-            NOTE: n must be a perfect square!
-            """
-            n = int(np.sqrt(n_samples))
+        """
+        NOTE: n must be a perfect square!
+        """
+        n = int(np.sqrt(n_samples))
 
-            z = torch.randn((n_samples, self.latent_dim)).to(self.device)
-            x_gen = self.G(z)
+        z = torch.randn((n_samples, self.latent_dim)).to(self.device)
+        x_gen = self.G(z)
 
-            # Move x_gen to cpu() and normalize
-            x_gen = x_gen.cpu().detach().numpy()
-            x_gen = (x_gen - x_gen.min()) / (x_gen.max() - x_gen.min())
+        # Move x_gen to cpu() and normalize
+        x_gen = x_gen.cpu().detach().numpy()
+        x_gen = (x_gen - x_gen.min()) / (x_gen.max() - x_gen.min())
 
-            # Results
-            #### Create results folder if required
-            if not os.path.exists(path):
-                os.makedirs(path)
+        # Results
+        #### Create results folder if required
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-            # Save images
-            plt.figure()
-            for i in range(n_samples):
-                plt.subplot(n, n, i + 1)
-                if self.config.data.channels == 1:
-                    plt.imshow(x_gen[i, 0], cmap="gray")
-                elif self.config.data.channels == 3:
-                    plt.imshow(np.transpose(x_gen[i], axes=(1, 2, 0)))
-                plt.axis("off")
-            plt.tight_layout()
-            plt.savefig(
-                f"{path}/generation.png",
-                dpi=400,
-            )
-            plt.close()
+        # Save images
+        plt.figure()
+        for i in range(n_samples):
+            plt.subplot(n, n, i + 1)
+            if self.config.data.channels == 1:
+                plt.imshow(x_gen[i, 0], cmap="gray")
+            elif self.config.data.channels == 3:
+                plt.imshow(np.transpose(x_gen[i], axes=(1, 2, 0)))
+            plt.axis("off")
+        plt.tight_layout()
+        plt.savefig(
+            f"{path}/generation.png",
+            dpi=400,
+        )
+        plt.close()
 
-    def G(self, z):
+    def G(self, z, *args, **kwargs):
         x = self.generator(z)
 
         # Normalize x

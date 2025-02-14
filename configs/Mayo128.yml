@@ -34,6 +34,12 @@ diffusion:
 DCGAN:
     latent_dim: 100
 
+WGAN:
+    z_dim: 100
+    lambda_gp: 10
+    n_critic: 5
+
+
 StyleGANv2:
     z_dim: 512
     w_dim: 512
