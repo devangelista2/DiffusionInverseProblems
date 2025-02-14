@@ -16,14 +16,14 @@ GENERATIVE_MODEL = "DDIM"  # in {"DDIM", "DCGAN", "StyleGANv2"}
 
 # Select operatore in: "Identity", "GaussianBlur", "Radon"
 OPERATOR = "Radon"
-NOISE_LEVEL = 0
+NOISE_LEVEL = 0.01
 
 # SPECIFY OPERATOR SETTINGS (NOT ALL OF THEM ARE REQUIRED FOR ALL THE EXPERIMENTS)
 settings = {
     "kernel_size": 3,
     "kernel_variance": 1,
-    "angular_range": [0, 180],
-    "n_angles": 60,
+    "angular_range": [0, 90],
+    "n_angles": 15,
 }
 
 # Reconstructor settings
@@ -129,4 +129,8 @@ for metric_name in metrics.keys():
 
 # Saving reconstruction
 fname_rec = f"recon_{OPERATOR}_DS_{DIFFUSION_STEPS}_NL_{NOISE_LEVEL}_lmbdaTik_{LAMBDATik}_lmbdaTV_{LAMBDATV}_alpha_{ALPHA}.png"
-plt.imsave(f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_rec}", utilities.project(x_sol[0, 0]), cmap="gray")
+plt.imsave(
+    f"{BASE_PATH}/{GENERATIVE_MODEL}/{fname_rec}",
+    utilities.project(x_sol[0, 0]),
+    cmap="gray",
+)

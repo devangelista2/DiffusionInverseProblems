@@ -22,17 +22,13 @@ class DDIM(object):
         self.alpha = schedules.improved_cosine
 
         # Define the model
-        self.model = DhariwalUNet(
-            img_resolution=config.data.image_size,
-            in_channels=config.model.in_ch,
+        self.model = ConditionedUNet(
+            config.model.in_ch,
+            config.model.n_ch,
+            config.model.n_conv_per_level,
+            config.model.L,
         ).to(self.device)
-        # self.model = ConditionedUNet(
-        #     config.model.in_ch,
-        #     config.model.n_ch,
-        #     config.model.n_conv_per_level,
-        #     config.model.L,
-        # ).to(self.device)
-        # self.model = torch.nn.DataParallel(self.model)
+        self.model = torch.nn.DataParallel(self.model)
 
         # Define EMA Model
         self.ema_helper = EMAHelper(mu=self.config.model.ema_rate)
