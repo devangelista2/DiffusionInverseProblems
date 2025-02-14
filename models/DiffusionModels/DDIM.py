@@ -21,7 +21,6 @@ class DDIM(object):
         # Initialize the schedule
         self.alpha = schedules.improved_cosine
 
-        # Define the model
         self.model = ConditionedUNet(
             config.model.in_ch,
             config.model.n_ch,
